@@ -1,14 +1,15 @@
 import React from 'react';
-import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { cores, direcao160 } from '../tema';
 import { Cabecalho, CampoBusca, Divisor, FaixaHorizontal } from '../componentes';
 import { IconeFiltro, IconeLocal, IconeSino } from '../icones';
-import { DATAS, Jogo } from '../dados';
+import { JogoUI, rotuloParticipacao } from '../adaptador';
 import { usePlei } from '../estado';
 
-function CartaoJogo({ jogo, inscrito }: { jogo: Jogo; inscrito: boolean }) {
+function CartaoJogo({ jogo }: { jogo: JogoUI }) {
   const { abrirJogo, iniciarEntrada } = usePlei();
+  const lotado = jogo.going >= jogo.total;
 
   return (
     <View style={estilos.cartao}>
@@ -22,17 +23,17 @@ function CartaoJogo({ jogo, inscrito }: { jogo: Jogo; inscrito: boolean }) {
         >
           <View style={estilos.selo}>
             <Text style={estilos.textoSelo}>
-              {jogo.going}/{jogo.total} Going
+              {jogo.going}/{jogo.total} confirmados
             </Text>
           </View>
-          <Text style={estilos.legendaFoto}>field photo</Text>
+          <Text style={estilos.legendaFoto}>{jogo.dataLonga}</Text>
         </LinearGradient>
       </Pressable>
 
       <View style={estilos.corpo}>
         <Pressable onPress={() => abrirJogo(jogo.id)}>
           <Text style={estilos.titulo}>{jogo.title}</Text>
-          <Text style={estilos.subtitulo}>by: {jogo.host}</Text>
+          <Text style={estilos.subtitulo}>por: {jogo.host}</Text>
           <View style={estilos.linhaLocal}>
             <IconeLocal />
             <Text style={estilos.subtitulo}>{jogo.location}</Text>
@@ -40,8 +41,15 @@ function CartaoJogo({ jogo, inscrito }: { jogo: Jogo; inscrito: boolean }) {
 
           <Divisor />
 
-          <View style={estilos.etiqueta}>
-            <Text style={estilos.textoEtiqueta}>{jogo.tag}</Text>
+          <View style={estilos.linhaEtiquetas}>
+            <View style={estilos.etiqueta}>
+              <Text style={estilos.textoEtiqueta}>{jogo.tag}</Text>
+            </View>
+            {jogo.status === 'confirmado' ? (
+              <View style={[estilos.etiqueta, estilos.etiquetaConfirmado]}>
+                <Text style={[estilos.textoEtiqueta, { color: cores.menta }]}>Confirmado</Text>
+              </View>
+            ) : null}
           </View>
 
           <View style={estilos.linhaPreco}>
@@ -54,75 +62,100 @@ function CartaoJogo({ jogo, inscrito }: { jogo: Jogo; inscrito: boolean }) {
           <Divisor />
         </Pressable>
 
-        <Pressable onPress={() => iniciarEntrada(jogo.id)} style={{ paddingVertical: 6 }}>
-          <Text style={estilos.entrar}>{inscrito ? 'Joined ✓' : 'Join Game'}</Text>
-        </Pressable>
+        {jogo.minha ? (
+          <Text style={[estilos.entrar, { color: cores.textoSuave }]}>
+            {rotuloParticipacao(jogo.minha)}
+          </Text>
+        ) : (
+          <Pressable onPress={() => iniciarEntrada(jogo.id)} style={{ paddingVertical: 6 }}>
+            <Text style={estilos.entrar}>{lotado ? 'Entrar na fila' : 'Entrar no jogo'}</Text>
+          </Pressable>
+        )}
       </View>
     </View>
   );
 }
 
 export function TelaDiscover({ topo }: { topo: number }) {
-  const { indiceData, setIndiceData, jogos, inscritos, mostrarTorrada } = usePlei();
-
-  // No protótipo só o primeiro chip de data tem jogos; os outros caem no estado vazio.
-  const jogosDoDia = indiceData === 0 ? jogos : [];
+  const {
+    carregando,
+    erroCarregamento,
+    recarregar,
+    datas,
+    indiceData,
+    setIndiceData,
+    jogosDoDia,
+    mostrarTorrada,
+  } = usePlei();
 
   return (
     <>
       <Cabecalho
         topo={topo}
-        titulo="Discover"
+        titulo="Descubra"
         acao={
-          <Pressable onPress={() => mostrarTorrada('No new notifications')}>
+          <Pressable onPress={() => mostrarTorrada('Sem notificações novas')}>
             <IconeSino />
           </Pressable>
         }
       />
 
       <View style={estilos.linhaBusca}>
-        <CampoBusca texto="Search games" />
-        <Pressable
-          onPress={() => mostrarTorrada('Filters coming soon')}
-          style={estilos.botaoFiltro}
-        >
+        <CampoBusca texto="Buscar jogos" />
+        <Pressable onPress={() => mostrarTorrada('Filtros em breve')} style={estilos.botaoFiltro}>
           <IconeFiltro />
         </Pressable>
       </View>
 
-      <FaixaHorizontal>
-        {DATAS.map((rotulo, i) => {
-          const ativa = i === indiceData;
-          return (
-            <Pressable
-              key={rotulo}
-              onPress={() => setIndiceData(i)}
-              style={[
-                estilos.chipData,
-                { backgroundColor: ativa ? '#fff' : 'rgba(255,255,255,0.08)' },
-              ]}
-            >
-              <Text
+      {datas.length > 0 && (
+        <FaixaHorizontal>
+          {datas.map((data, i) => {
+            const ativa = i === indiceData;
+            return (
+              <Pressable
+                key={data.chave}
+                onPress={() => setIndiceData(i)}
                 style={[
-                  estilos.textoChipData,
-                  { color: ativa ? '#0a2c20' : 'rgba(255,255,255,0.8)' },
+                  estilos.chipData,
+                  { backgroundColor: ativa ? '#fff' : 'rgba(255,255,255,0.08)' },
                 ]}
               >
-                {rotulo}
-              </Text>
-            </Pressable>
-          );
-        })}
-      </FaixaHorizontal>
+                <Text
+                  style={[
+                    estilos.textoChipData,
+                    { color: ativa ? '#0a2c20' : 'rgba(255,255,255,0.8)' },
+                  ]}
+                >
+                  {data.rotulo}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </FaixaHorizontal>
+      )}
 
-      {jogosDoDia.length > 0 ? (
+      {carregando ? (
+        <ActivityIndicator color={cores.menta} style={{ marginTop: 60 }} />
+      ) : erroCarregamento ? (
+        <View style={estilos.blocoErro}>
+          <Text style={estilos.textoErro}>Não deu pra carregar os jogos.</Text>
+          <Text style={estilos.detalheErro}>{erroCarregamento}</Text>
+          <Pressable onPress={() => void recarregar()} style={estilos.botaoTentar}>
+            <Text style={estilos.textoBotaoTentar}>Tentar de novo</Text>
+          </Pressable>
+        </View>
+      ) : jogosDoDia.length > 0 ? (
         <View style={estilos.lista}>
           {jogosDoDia.map((jogo) => (
-            <CartaoJogo key={jogo.id} jogo={jogo} inscrito={inscritos.includes(jogo.id)} />
+            <CartaoJogo key={jogo.id} jogo={jogo} />
           ))}
         </View>
       ) : (
-        <Text style={estilos.semJogos}>No games scheduled for this day yet.</Text>
+        <Text style={estilos.semJogos}>
+          {datas.length === 0
+            ? 'Nenhum jogo publicado ainda. Crie o primeiro no botão +.'
+            : 'Nenhum jogo neste dia.'}
+        </Text>
       )}
 
       <View style={{ height: 16 }} />
@@ -175,7 +208,7 @@ const estilos = StyleSheet.create({
   legendaFoto: {
     fontFamily: Platform.select({ ios: 'Menlo', android: 'monospace', default: 'monospace' }),
     fontSize: 10,
-    color: 'rgba(255,255,255,0.55)',
+    color: 'rgba(255,255,255,0.75)',
   },
 
   corpo: { padding: 16 },
@@ -183,13 +216,14 @@ const estilos = StyleSheet.create({
   subtitulo: { color: cores.textoSuave, fontSize: 13, marginTop: 4 },
   linhaLocal: { flexDirection: 'row', alignItems: 'center', gap: 4 },
 
+  linhaEtiquetas: { flexDirection: 'row', gap: 8 },
   etiqueta: {
-    alignSelf: 'flex-start',
     backgroundColor: 'rgba(255,255,255,0.1)',
     paddingVertical: 5,
     paddingHorizontal: 12,
     borderRadius: 12,
   },
+  etiquetaConfirmado: { backgroundColor: 'rgba(74,222,154,0.12)' },
   textoEtiqueta: { color: 'rgba(255,255,255,0.8)', fontSize: 12, fontWeight: '600' },
 
   linhaPreco: {
@@ -210,4 +244,17 @@ const estilos = StyleSheet.create({
     color: cores.textoFraco,
     fontSize: 14,
   },
+
+  blocoErro: { paddingHorizontal: 30, paddingTop: 50, alignItems: 'center' },
+  textoErro: { color: cores.texto, fontSize: 16, fontWeight: '700' },
+  detalheErro: { color: cores.textoFraco, fontSize: 13, marginTop: 8, textAlign: 'center' },
+  botaoTentar: {
+    marginTop: 18,
+    borderWidth: 1,
+    borderColor: cores.menta,
+    borderRadius: 22,
+    paddingVertical: 12,
+    paddingHorizontal: 22,
+  },
+  textoBotaoTentar: { color: cores.menta, fontSize: 15, fontWeight: '700' },
 });

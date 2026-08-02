@@ -1,25 +1,10 @@
-// Sementes do protótipo (GAMES_SEED / FRIENDS_SEED / SETTINGS_SEED).
-// Os nomes dos campos são os mesmos do arquivo de design, pra facilitar comparar.
+// Sementes locais do protótipo. Jogos e participações vêm do backend
+// (ver adaptador.ts); o que sobrou aqui é o que ainda não tem API:
+// amigos, conversas, perfil e itens de ajustes.
 
 export interface Gradiente {
   colors: string[];
   locations: number[];
-}
-
-export interface Jogo {
-  id: string;
-  title: string;
-  host: string;
-  location: string;
-  tag: string;
-  timeRange: string;
-  format: string;
-  price: string;
-  going: number;
-  total: number;
-  gradient: Gradiente;
-  description: string;
-  players: string[];
 }
 
 export interface Amigo {
@@ -61,123 +46,78 @@ export interface Perfil {
   games: number;
   facilities: number;
   hours: string;
-  /** 0..7 — alimenta a barra "You're almost there!". */
+  /** 0..7 — alimenta a barra "Complete seu perfil". */
   progress: number;
 }
 
-export const NIVEIS = ['Beginner', 'Intermediate', 'Advanced'] as const;
+/** Níveis do perfil (campo livre, sem validação no backend). */
+export const NIVEIS = ['Iniciante', 'Intermediário', 'Avançado'] as const;
 
-export const DATAS = ['Sat 18', 'Sun 19', 'Mon 20', 'Tue 21', 'Wed 22'];
-
-export const JOGOS_INICIAIS: Jogo[] = [
-  {
-    id: 'g1',
-    title: 'Bushwick Inlet 9v9',
-    host: 'Brooklyn Pickup Soccer',
-    location: 'Bushwick Inlet Park | BPSC',
-    tag: 'Intermediate',
-    timeRange: '12:00 PM to 1:30 PM',
-    format: '9v9',
-    price: '$12.65',
-    going: 0,
-    total: 18,
-    gradient: {
-      colors: ['#e8925a', '#7a8f7a', '#2f5c46', '#173a2b'],
-      locations: [0, 0.4, 0.75, 1],
-    },
-    description:
-      'A relaxed weekend pickup match on the waterfront turf. All levels welcome, bring both light and dark shirts.',
-    players: ['J', 'M', 'A'],
-  },
-  {
-    id: 'g2',
-    title: 'McCarren Turf 7v7',
-    host: 'Greenpoint Ballers',
-    location: 'McCarren Park Track & Field',
-    tag: 'Advanced',
-    timeRange: '6:00 PM to 7:00 PM',
-    format: '7v7',
-    price: '$15.00',
-    going: 4,
-    total: 14,
-    gradient: {
-      colors: ['#1c2b22', '#245c3d', '#3fae6d'],
-      locations: [0, 0.45, 1],
-    },
-    description:
-      'Fast-paced competitive run under the lights. Cleats required, no metal studs on the turf.',
-    players: ['R', 'K', 'S', 'D'],
-  },
-  {
-    id: 'g3',
-    title: 'Sunset Park 5v5',
-    host: 'NYC Weekend League',
-    location: 'Sunset Park Fieldhouse',
-    tag: 'Beginner',
-    timeRange: '9:00 AM to 10:00 AM',
-    format: '5v5',
-    price: '$8.00',
-    going: 8,
-    total: 10,
-    gradient: {
-      colors: ['#f2c46a', '#7fae6a', '#1f4a34'],
-      locations: [0, 0.45, 1],
-    },
-    description:
-      'Friendly small-sided game, great for first-timers looking to meet other players in the neighborhood.',
-    players: ['B', 'L', 'T', 'N', 'C', 'W', 'P', 'H'],
-  },
+/** Níveis aceitos no cadastro de jogo — mesmos valores da tela antiga. */
+export const NIVEIS_JOGO = [
+  { valor: 'livre', rotulo: 'Livre' },
+  { valor: 'iniciante', rotulo: 'Iniciante' },
+  { valor: 'intermediario', rotulo: 'Intermediário' },
+  { valor: 'avancado', rotulo: 'Avançado' },
 ];
 
-export const GRADIENTE_JOGO_NOVO: Gradiente = {
-  colors: ['#3a6b4d', '#1c3f2c'],
-  locations: [0, 1],
-};
+export const DURACOES = [
+  { valor: 60, rotulo: '1h' },
+  { valor: 90, rotulo: '1h30' },
+  { valor: 120, rotulo: '2h' },
+];
+
+export const PRAZOS = [
+  { valor: 2, rotulo: '2h antes' },
+  { valor: 6, rotulo: '6h antes' },
+  { valor: 12, rotulo: '12h antes' },
+  { valor: 24, rotulo: '24h antes' },
+];
 
 export const AMIGOS_INICIAIS: Amigo[] = [
-  { id: 'f1', name: 'Alex Rivera', initial: 'A', mutual: '3 mutual games' },
-  { id: 'f2', name: 'Jamie Chen', initial: 'J', mutual: '1 mutual game' },
-  { id: 'f3', name: 'Sam Osei', initial: 'S', mutual: '5 mutual games' },
+  { id: 'f1', name: 'Alex Rivera', initial: 'A', mutual: '3 jogos em comum' },
+  { id: 'f2', name: 'Jamie Chen', initial: 'J', mutual: '1 jogo em comum' },
+  { id: 'f3', name: 'Sam Osei', initial: 'S', mutual: '5 jogos em comum' },
 ];
 
 export const AJUSTES: ItemAjustes[] = [
   {
     key: 'payments',
     icon: '💳',
-    title: 'Payments',
-    subtitle: 'Manage payment methods and billing',
-    toast: 'Payments coming soon',
+    title: 'Pagamentos',
+    subtitle: 'Formas de pagamento e cobranças',
+    toast: 'Pagamentos em breve',
   },
   {
     key: 'help',
     icon: '❓',
-    title: 'Get Help',
-    subtitle: 'FAQ, support, and contact us',
-    toast: 'Support inbox opened',
+    title: 'Ajuda',
+    subtitle: 'Dúvidas, suporte e contato',
+    toast: 'Suporte aberto',
   },
   {
     key: 'terms',
     icon: '📄',
-    title: 'Terms & Conditions',
-    subtitle: 'Read our terms of service',
-    toast: 'Opening terms',
+    title: 'Termos de uso',
+    subtitle: 'Leia os termos do serviço',
+    toast: 'Abrindo termos',
   },
   {
     key: 'privacy',
     icon: '🔒',
-    title: 'Privacy Policy',
-    subtitle: 'How we handle your data',
-    toast: 'Opening privacy policy',
+    title: 'Privacidade',
+    subtitle: 'Como tratamos seus dados',
+    toast: 'Abrindo política de privacidade',
   },
 ];
 
 export const PERFIL_INICIAL: Perfil = {
   initial: 'B',
   name: 'Blabla Blabla',
-  flag: '🇺🇸',
-  country: 'United States',
+  flag: '🇧🇷',
+  country: 'Brasil',
   position: '-',
-  skill: 'Intermediate',
+  skill: 'Intermediário',
   games: 0,
   facilities: 0,
   hours: '0h',

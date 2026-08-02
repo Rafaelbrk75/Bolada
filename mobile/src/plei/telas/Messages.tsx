@@ -13,9 +13,9 @@ export function TelaMessages({ topo }: { topo: number }) {
     <>
       <Cabecalho
         topo={topo}
-        titulo="Messages"
+        titulo="Mensagens"
         acao={
-          <Pressable onPress={() => mostrarTorrada('Pick a friend to start chatting')}>
+          <Pressable onPress={() => mostrarTorrada('Escolha um amigo pra começar')}>
             <IconeLapis />
           </Pressable>
         }
@@ -25,26 +25,26 @@ export function TelaMessages({ topo }: { topo: number }) {
         ativa={abaMensagens}
         onSelect={setAbaMensagens}
         itens={[
-          { chave: 'direct', rotulo: 'DIRECT' },
-          { chave: 'groups', rotulo: 'GROUPS' },
+          { chave: 'direct', rotulo: 'DIRETAS' },
+          { chave: 'groups', rotulo: 'GRUPOS' },
         ]}
       />
 
       <View style={{ paddingHorizontal: 20, paddingVertical: 16, flexDirection: 'row' }}>
-        <CampoBusca texto="Search friends" />
+        <CampoBusca texto="Buscar amigos" />
       </View>
 
       {abaMensagens === 'groups' ? (
         <View style={estilos.vazio}>
-          <Text style={estilos.tituloVazio}>No Groups</Text>
-          <Text style={estilos.descricaoVazio}>Create a group with your friends to chat together.</Text>
+          <Text style={estilos.tituloVazio}>Nenhum grupo</Text>
+          <Text style={estilos.descricaoVazio}>Crie um grupo com seus amigos pra conversarem juntos.</Text>
         </View>
       ) : listaDireta.length === 0 ? (
         <View style={estilos.vazio}>
           <View style={{ marginBottom: 18, opacity: 0.9 }}>
             <IconeBalaoVazio />
           </View>
-          <Text style={estilos.tituloVazio}>No Messages</Text>
+          <Text style={estilos.tituloVazio}>Nenhuma mensagem</Text>
         </View>
       ) : (
         <View style={{ paddingHorizontal: 20 }}>

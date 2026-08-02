@@ -3,7 +3,9 @@ import {
   Jogo,
   NovoJogo,
   Participacao,
+  RespostaCancelamento,
   RespostaInscricao,
+  RespostaPagarReserva,
   SplitVaga,
   StatusJogo,
 } from '../types/jogo';
@@ -39,6 +41,27 @@ export function criarJogo(dados: NovoJogo): Promise<Jogo> {
 /** Jogo nasce em 'rascunho'; só aparece na lista pública depois de publicar. */
 export function publicarJogo(id: string): Promise<Jogo> {
   return post<Jogo>(`/jogos/${id}/publicar`);
+}
+
+/** Cancelamento pelo jogador. A faixa de reembolso é decidida no backend. */
+export function cancelarParticipacao(
+  participacaoId: string,
+  escolha: 'cartao' | 'credito' = 'cartao'
+): Promise<RespostaCancelamento> {
+  return post<RespostaCancelamento>(`/participacoes/${participacaoId}/cancelar`, { escolha });
+}
+
+/** Promovido da waitlist tem 10 min pra pagar; depois disso a vaga passa adiante. */
+export function pagarReserva(
+  participacaoId: string,
+  metodo: 'cartao' | 'pix'
+): Promise<RespostaPagarReserva> {
+  return post<RespostaPagarReserva>(`/participacoes/${participacaoId}/pagar-reserva`, { metodo });
+}
+
+/** Preço da vaga -> preço + taxa do jogador + total cobrado. */
+export function calcularSplit(precoVagaCentavos: number): Promise<SplitVaga> {
+  return post<SplitVaga>('/precos/split', { precoVagaCentavos });
 }
 
 export function sugerirPreco(entrada: {

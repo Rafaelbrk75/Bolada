@@ -1,3 +1,4 @@
+import cors from '@fastify/cors';
 import Fastify, { FastifyError, FastifyInstance } from 'fastify';
 import { JogoAppService } from '../app/jogoAppService';
 import {
@@ -20,6 +21,10 @@ export interface AppDeps {
 
 export function construirApp(deps?: Partial<AppDeps>): FastifyInstance {
   const app = Fastify({ logger: true });
+
+  // O alvo web do Expo (`npm run web`) roda em outra origem que a API.
+  // Em produção isto vira uma lista fechada de origens.
+  app.register(cors, { origin: true });
 
   const jogoService =
     deps?.jogoService ??

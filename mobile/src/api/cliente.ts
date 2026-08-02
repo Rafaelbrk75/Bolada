@@ -10,12 +10,15 @@ export class ErroApi extends Error {
 }
 
 async function requisitar<T>(caminho: string, opcoes?: RequestInit): Promise<T> {
+  // Só declara JSON quando existe corpo: o Fastify recusa com 400
+  // "Body cannot be empty when content-type is set to 'application/json'"
+  // em rotas de ação sem body (publicar, checkin, expirar-reserva).
+  const cabecalhos: Record<string, string> = { ...(opcoes?.headers as Record<string, string>) };
+  if (opcoes?.body !== undefined) cabecalhos['Content-Type'] = 'application/json';
+
   const resposta = await fetch(`${API_URL}${caminho}`, {
     ...opcoes,
-    headers: {
-      'Content-Type': 'application/json',
-      ...opcoes?.headers,
-    },
+    headers: cabecalhos,
   });
 
   const texto = await resposta.text();

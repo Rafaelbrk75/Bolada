@@ -162,13 +162,32 @@ export function SeletorNivel({
   onSelect(nivel: string): void;
 }) {
   return (
+    <Chips
+      opcoes={NIVEIS.map((n) => ({ valor: n, rotulo: n }))}
+      valor={valor}
+      onSelecionar={onSelect}
+    />
+  );
+}
+
+/** Grupo de opções mutuamente exclusivas, uma linha, largura dividida. */
+export function Chips<T extends string | number>({
+  opcoes,
+  valor,
+  onSelecionar,
+}: {
+  opcoes: { valor: T; rotulo: string }[];
+  valor: T;
+  onSelecionar(valor: T): void;
+}) {
+  return (
     <View style={{ flexDirection: 'row', gap: 8 }}>
-      {NIVEIS.map((nivel) => {
-        const ativo = valor === nivel;
+      {opcoes.map((opcao) => {
+        const ativo = valor === opcao.valor;
         return (
           <Pressable
-            key={nivel}
-            onPress={() => onSelect(nivel)}
+            key={String(opcao.valor)}
+            onPress={() => onSelecionar(opcao.valor)}
             style={[
               estilos.opcaoNivel,
               {
@@ -184,11 +203,36 @@ export function SeletorNivel({
                 fontWeight: '600',
               }}
             >
-              {nivel}
+              {opcao.rotulo}
             </Text>
           </Pressable>
         );
       })}
+    </View>
+  );
+}
+
+/** Rótulo + erro/dica, no formato usado pelas folhas de formulário. */
+export function CampoRotulado({
+  rotulo,
+  erro,
+  dica,
+  children,
+}: {
+  rotulo: string;
+  erro?: string;
+  dica?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <View>
+      <Text style={estilos.rotuloCampo}>{rotulo}</Text>
+      {children}
+      {erro ? (
+        <Text style={estilos.erroCampo}>{erro}</Text>
+      ) : dica ? (
+        <Text style={estilos.dicaCampo}>{dica}</Text>
+      ) : null}
     </View>
   );
 }
@@ -329,6 +373,10 @@ export const estilos = StyleSheet.create({
     borderRadius: 14,
     borderWidth: 1,
   },
+
+  rotuloCampo: { color: cores.textoFraco, fontSize: 12, marginBottom: 6 },
+  erroCampo: { color: cores.erro, fontSize: 12, marginTop: 6 },
+  dicaCampo: { color: cores.textoFraco, fontSize: 12, marginTop: 6 },
 
   alca: {
     width: 40,

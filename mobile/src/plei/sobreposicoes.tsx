@@ -1,10 +1,12 @@
 import React from 'react';
 import {
+  ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
   Pressable,
   ScrollView,
   StyleSheet,
+  Switch,
   Text,
   TextInput,
   View,
@@ -18,11 +20,17 @@ import {
   BotaoPrimario,
   BotaoTexto,
   Campo,
+  CampoRotulado,
+  Chips,
   SeletorNivel,
 } from './componentes';
+import { SeletorInicio } from './SeletorInicio';
 import { IconeAvancar, IconeCheck, IconeEnviar, IconeVoltar } from './icones';
-import { AJUSTES } from './dados';
-import { usePlei } from './estado';
+import { AJUSTES, DURACOES, NIVEIS_JOGO, PRAZOS } from './dados';
+import { previsaoReembolso, rotuloParticipacao } from './adaptador';
+import { MetodoPagamento, useJogoAberto, usePlei } from './estado';
+import { formatarCentavos } from '../utils/moeda';
+import { formatarDataHora, somarHoras, somarMinutos } from '../utils/data';
 
 export function Sobreposicoes() {
   return (
@@ -30,6 +38,7 @@ export function Sobreposicoes() {
       <FolhaDetalheJogo />
       <FolhaConfirmarEntrada />
       <FolhaEntradaConfirmada />
+      <FolhaCancelamento />
       <FolhaCriarJogo />
       <FolhaEditarPerfil />
       <FolhaChat />
@@ -38,11 +47,30 @@ export function Sobreposicoes() {
   );
 }
 
+function SeletorMetodo({
+  valor,
+  onSelect,
+}: {
+  valor: MetodoPagamento;
+  onSelect(m: MetodoPagamento): void;
+}) {
+  return (
+    <Chips
+      opcoes={[
+        { valor: 'cartao' as const, rotulo: 'Cartão' },
+        { valor: 'pix' as const, rotulo: 'Pix' },
+      ]}
+      valor={valor}
+      onSelecionar={onSelect}
+    />
+  );
+}
+
 function FolhaDetalheJogo() {
-  const { jogos, jogoAbertoId, passoEntrada, inscritos, fecharSobreposicoes, iniciarEntrada } =
-    usePlei();
-  const jogo = jogos.find((g) => g.id === jogoAbertoId);
+  const { passoEntrada, fecharSobreposicoes, iniciarEntrada } = usePlei();
+  const jogo = useJogoAberto();
   const visivel = !!jogo && !passoEntrada;
+  const lotado = !!jogo && jogo.going >= jogo.total;
 
   return (
     <FolhaInferior visivel={visivel} aoFechar={fecharSobreposicoes}>
@@ -58,12 +86,12 @@ function FolhaDetalheJogo() {
             <Pressable onPress={fecharSobreposicoes} style={estilos.botaoVoltarRedondo}>
               <IconeVoltar />
             </Pressable>
-            <Text style={estilos.legendaFoto}>field photo</Text>
+            <Text style={estilos.legendaFoto}>{jogo.dataLonga}</Text>
           </LinearGradient>
 
           <View style={{ padding: 20 }}>
             <Text style={estilos.tituloDetalhe}>{jogo.title}</Text>
-            <Text style={estilos.subtituloDetalhe}>by: {jogo.host}</Text>
+            <Text style={estilos.subtituloDetalhe}>por: {jogo.host}</Text>
             <Text style={[estilos.subtituloDetalhe, { marginTop: 4 }]}>{jogo.location}</Text>
 
             <View style={estilos.linhaEtiquetas}>
@@ -72,8 +100,11 @@ function FolhaDetalheJogo() {
               </View>
               <View style={estilos.etiqueta}>
                 <Text style={estilos.textoEtiqueta}>
-                  {jogo.going}/{jogo.total} Going
+                  {jogo.going}/{jogo.total} confirmados
                 </Text>
+              </View>
+              <View style={estilos.etiqueta}>
+                <Text style={estilos.textoEtiqueta}>{jogo.format}</Text>
               </View>
             </View>
 
@@ -82,33 +113,41 @@ function FolhaDetalheJogo() {
             <View style={estilos.divisor} />
 
             <View style={estilos.linhaPreco}>
-              <Text style={estilos.textoPreco}>
-                {jogo.timeRange} • {jogo.format}
-              </Text>
+              <Text style={estilos.textoPreco}>{jogo.timeRange}</Text>
               <Text style={[estilos.textoPreco, { fontWeight: '700' }]}>{jogo.price}</Text>
             </View>
 
-            <Text style={estilos.tituloJogadores}>Players going</Text>
-            <View style={{ flexDirection: 'row' }}>
-              {jogo.players.map((inicial, i) => (
-                <Avatar
-                  key={`${inicial}-${i}`}
-                  inicial={inicial}
-                  tamanho={36}
-                  estilo={{
-                    borderWidth: 2,
-                    borderColor: cores.folha,
-                    marginLeft: i === 0 ? 0 : -8,
-                  }}
-                />
-              ))}
-            </View>
+            <Text style={estilos.tituloJogadores}>Quem já está dentro</Text>
+            {jogo.players.length > 0 ? (
+              <View style={{ flexDirection: 'row' }}>
+                {jogo.players.map((inicial, i) => (
+                  <Avatar
+                    key={`${inicial}-${i}`}
+                    inicial={inicial}
+                    tamanho={36}
+                    estilo={{
+                      borderWidth: 2,
+                      borderColor: cores.folha,
+                      marginLeft: i === 0 ? 0 : -8,
+                    }}
+                  />
+                ))}
+              </View>
+            ) : (
+              <Text style={estilos.semJogadores}>Ninguém ainda — seja o primeiro.</Text>
+            )}
 
-            <BotaoPrimario
-              rotulo={inscritos.includes(jogo.id) ? 'Joined ✓' : 'Join Game'}
-              onPress={() => iniciarEntrada(jogo.id)}
-              estilo={{ marginTop: 24 }}
-            />
+            {jogo.minha ? (
+              <View style={estilos.blocoStatus}>
+                <Text style={estilos.textoStatus}>{rotuloParticipacao(jogo.minha)}</Text>
+              </View>
+            ) : (
+              <BotaoPrimario
+                rotulo={lotado ? 'Entrar na fila de espera' : 'Entrar no jogo'}
+                onPress={() => iniciarEntrada(jogo.id)}
+                estilo={{ marginTop: 24 }}
+              />
+            )}
           </View>
         </ScrollView>
       ) : null}
@@ -117,29 +156,80 @@ function FolhaDetalheJogo() {
 }
 
 function FolhaConfirmarEntrada() {
-  const { jogos, jogoAbertoId, passoEntrada, confirmarEntrada, cancelarEntrada } = usePlei();
-  const jogo = jogos.find((g) => g.id === jogoAbertoId);
+  const {
+    passoEntrada,
+    splitPrevisto,
+    metodoPagamento,
+    setMetodoPagamento,
+    confirmarEntrada,
+    cancelarEntrada,
+    enviandoEntrada,
+    erroEntrada,
+  } = usePlei();
+  const jogo = useJogoAberto();
+  const lotado = !!jogo && jogo.going >= jogo.total;
 
   return (
     <FolhaInferior visivel={passoEntrada === 'confirm' && !!jogo} aoFechar={cancelarEntrada}>
       {jogo ? (
         <View style={{ paddingHorizontal: 20, paddingTop: 24, paddingBottom: 34 }}>
           <AlcaFolha />
-          <Text style={estilos.tituloFolha}>Confirm your spot</Text>
+          <Text style={estilos.tituloFolha}>
+            {lotado ? 'Entrar na fila de espera' : 'Confirmar sua vaga'}
+          </Text>
 
           <View style={estilos.cartaoResumo}>
             <Text style={estilos.tituloResumo}>{jogo.title}</Text>
             <Text style={estilos.subtituloResumo}>
-              {jogo.location} • {jogo.timeRange}
+              {jogo.dataLonga} • {jogo.timeRange}
             </Text>
-            <View style={estilos.linhaResumo}>
-              <Text style={estilos.textoResumo}>Price</Text>
-              <Text style={[estilos.textoResumo, { fontWeight: '700' }]}>{jogo.price}</Text>
-            </View>
+
+            <View style={estilos.divisorResumo} />
+
+            {splitPrevisto ? (
+              <>
+                <LinhaValor rotulo="Vaga" valor={splitPrevisto.precoVagaCentavos} />
+                <LinhaValor rotulo="Taxa de serviço" valor={splitPrevisto.taxaServicoCentavos} />
+                <LinhaValor
+                  rotulo="Total"
+                  valor={splitPrevisto.totalCobradoCentavos}
+                  destaque
+                />
+              </>
+            ) : (
+              <LinhaValor rotulo="Vaga" valor={jogo.precoVagaCentavos} destaque />
+            )}
           </View>
 
-          <BotaoPrimario rotulo="Confirm & Join" onPress={confirmarEntrada} estilo={{ marginTop: 20 }} />
-          <BotaoTexto rotulo="Cancel" onPress={cancelarEntrada} estilo={{ marginTop: 12 }} />
+          {lotado ? (
+            <Text style={estilos.avisoFila}>
+              O jogo está cheio. Você entra na fila sem pagar nada agora — se abrir vaga, tem 10
+              minutos pra confirmar.
+            </Text>
+          ) : (
+            <View style={{ marginTop: 18, gap: 8 }}>
+              <Text style={estilos.rotuloMetodo}>Forma de pagamento</Text>
+              <SeletorMetodo valor={metodoPagamento} onSelect={setMetodoPagamento} />
+              <Text style={estilos.notaMetodo}>
+                {metodoPagamento === 'cartao'
+                  ? 'No cartão a cobrança só acontece quando o jogo confirma o mínimo de jogadores.'
+                  : 'No Pix a cobrança é imediata; se o jogo não confirmar, o valor volta integral.'}
+              </Text>
+            </View>
+          )}
+
+          {erroEntrada ? <Text style={estilos.erro}>{erroEntrada}</Text> : null}
+
+          {enviandoEntrada ? (
+            <ActivityIndicator color={cores.menta} style={{ marginTop: 24 }} />
+          ) : (
+            <BotaoPrimario
+              rotulo={lotado ? 'Entrar na fila' : 'Confirmar e entrar'}
+              onPress={() => void confirmarEntrada()}
+              estilo={{ marginTop: 20 }}
+            />
+          )}
+          <BotaoTexto rotulo="Cancelar" onPress={cancelarEntrada} estilo={{ marginTop: 12 }} />
         </View>
       ) : null}
     </FolhaInferior>
@@ -147,26 +237,92 @@ function FolhaConfirmarEntrada() {
 }
 
 function FolhaEntradaConfirmada() {
-  const { jogos, jogoAbertoId, passoEntrada, irParaReservas, fecharSobreposicoes } = usePlei();
-  const jogo = jogos.find((g) => g.id === jogoAbertoId);
+  const { passoEntrada, desfechoEntrada, irParaReservas, fecharSobreposicoes } = usePlei();
+  const jogo = useJogoAberto();
+
+  const emEspera = desfechoEntrada?.situacao === 'em_espera';
+  const titulo = emEspera
+    ? `Você é o ${desfechoEntrada?.posicaoEspera ?? '?'}º da fila`
+    : 'Vaga garantida!';
+
+  const descricao = emEspera
+    ? 'Ninguém foi cobrado. Se abrir vaga, você recebe 10 minutos pra confirmar o pagamento.'
+    : desfechoEntrada?.situacao === 'paga'
+      ? `Pix pago. ${jogo?.title ?? 'O jogo'} está nas suas vagas.`
+      : desfechoEntrada?.jogoConfirmou
+        ? 'O mínimo de jogadores bateu com a sua entrada — a cobrança no cartão já foi feita.'
+        : 'Cartão pré-autorizado. A cobrança só acontece quando o jogo confirmar o mínimo.';
 
   return (
     <FolhaInferior visivel={passoEntrada === 'success'} aoFechar={fecharSobreposicoes}>
       <View style={{ paddingHorizontal: 24, paddingVertical: 40, alignItems: 'center' }}>
         <View style={estilos.circuloCheck}>
-          <IconeCheck />
+          <IconeCheck color={emEspera ? cores.vagas : cores.menta} />
         </View>
-        <Text style={estilos.tituloSucesso}>You're in!</Text>
-        <Text style={estilos.descricaoSucesso}>
-          {jogo?.title} has been added to your bookings.
-        </Text>
+        <Text style={estilos.tituloSucesso}>{titulo}</Text>
+        <Text style={estilos.descricaoSucesso}>{descricao}</Text>
         <BotaoPrimario
-          rotulo="View Bookings"
+          rotulo="Ver minhas vagas"
           onPress={irParaReservas}
           estilo={{ marginTop: 24, alignSelf: 'stretch' }}
         />
-        <BotaoTexto rotulo="Close" onPress={fecharSobreposicoes} estilo={{ marginTop: 12 }} />
+        <BotaoTexto rotulo="Fechar" onPress={fecharSobreposicoes} estilo={{ marginTop: 12 }} />
       </View>
+    </FolhaInferior>
+  );
+}
+
+function FolhaCancelamento() {
+  const { cancelamentoAlvo, cancelando, confirmarCancelamento, fecharCancelamento } = usePlei();
+  const participacao = cancelamentoAlvo?.minha;
+  const naFila = participacao?.status === 'em_espera';
+  const horasAntes = cancelamentoAlvo
+    ? (new Date(cancelamentoAlvo.inicio).getTime() - Date.now()) / 3_600_000
+    : 0;
+  const ofereceCredito = !naFila && horasAntes >= 6 && horasAntes < 24;
+
+  return (
+    <FolhaInferior visivel={!!cancelamentoAlvo} aoFechar={fecharCancelamento}>
+      {cancelamentoAlvo ? (
+        <View style={{ paddingHorizontal: 20, paddingTop: 24, paddingBottom: 34 }}>
+          <AlcaFolha />
+          <Text style={estilos.tituloFolha}>Cancelar participação</Text>
+
+          <View style={estilos.cartaoResumo}>
+            <Text style={estilos.tituloResumo}>{cancelamentoAlvo.title}</Text>
+            <Text style={estilos.subtituloResumo}>
+              {cancelamentoAlvo.dataLonga} • {cancelamentoAlvo.timeRange}
+            </Text>
+            <View style={estilos.divisorResumo} />
+            <Text style={estilos.politica}>
+              {naFila
+                ? 'Você só está na fila — sair não gera cobrança nem devolução.'
+                : previsaoReembolso(cancelamentoAlvo.inicio)}
+            </Text>
+          </View>
+
+          {cancelando ? (
+            <ActivityIndicator color={cores.menta} style={{ marginTop: 24 }} />
+          ) : (
+            <>
+              <BotaoPrimario
+                rotulo={ofereceCredito ? 'Receber 50% no cartão' : 'Confirmar cancelamento'}
+                onPress={() => void confirmarCancelamento('cartao')}
+                estilo={{ marginTop: 20 }}
+              />
+              {ofereceCredito && (
+                <Pressable
+                  onPress={() => void confirmarCancelamento('credito')}
+                  style={estilos.botaoSecundario}
+                >
+                  <Text style={estilos.textoBotaoSecundario}>Receber 100% em crédito</Text>
+                </Pressable>
+              )}
+            </>
+          )}
+          <BotaoTexto rotulo="Voltar" onPress={fecharCancelamento} estilo={{ marginTop: 12 }} />
+        </View>
+      ) : null}
     </FolhaInferior>
   );
 }
@@ -176,10 +332,18 @@ function FolhaCriarJogo() {
     criacaoAberta,
     rascunhoJogo,
     setRascunhoJogo,
-    erroCriacao,
-    publicarJogo,
+    errosCriacao,
+    mostrarErrosCriacao,
+    splitSugerido,
+    pedirSugestaoPreco,
+    enviarNovoJogo,
+    criandoJogo,
     fecharSobreposicoes,
   } = usePlei();
+
+  const fim = somarMinutos(rascunhoJogo.inicio, rascunhoJogo.duracaoMinutos);
+  const prazo = somarHoras(rascunhoJogo.inicio, -rascunhoJogo.prazoHorasAntes);
+  const erro = (campo: string) => (mostrarErrosCriacao ? errosCriacao[campo] : undefined);
 
   return (
     <FolhaInferior visivel={criacaoAberta} aoFechar={fecharSobreposicoes}>
@@ -190,41 +354,157 @@ function FolhaCriarJogo() {
           contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 22, paddingBottom: 34 }}
         >
           <AlcaFolha />
-          <Text style={[estilos.tituloFolha, { marginBottom: 18 }]}>Create a game</Text>
+          <Text style={[estilos.tituloFolha, { marginBottom: 18 }]}>Criar jogo</Text>
 
-          <View style={{ gap: 14 }}>
-            <Campo
-              value={rascunhoJogo.location}
-              onChangeText={(location) => setRascunhoJogo({ location })}
-              placeholder="Location (e.g. McCarren Park)"
-            />
-            <Campo
-              value={rascunhoJogo.timeRange}
-              onChangeText={(timeRange) => setRascunhoJogo({ timeRange })}
-              placeholder="Time (e.g. 6:00 PM to 7:00 PM)"
-            />
-            <Campo
-              value={rascunhoJogo.format}
-              onChangeText={(format) => setRascunhoJogo({ format })}
-              placeholder="Format (e.g. 7v7)"
-            />
-            <Campo
-              value={rascunhoJogo.price}
-              onChangeText={(price) => setRascunhoJogo({ price })}
-              placeholder="Price (e.g. $10.00)"
-            />
-            <SeletorNivel valor={rascunhoJogo.skill} onSelect={(skill) => setRascunhoJogo({ skill })} />
+          <View style={{ gap: 16 }}>
+            <CampoRotulado rotulo="Título" erro={erro('titulo')}>
+              <Campo
+                value={rascunhoJogo.titulo}
+                onChangeText={(titulo) => setRascunhoJogo({ titulo })}
+                placeholder="Pelada de quinta"
+              />
+            </CampoRotulado>
+
+            <CampoRotulado rotulo="Nível">
+              <Chips
+                opcoes={NIVEIS_JOGO}
+                valor={rascunhoJogo.nivel}
+                onSelecionar={(nivel) => setRascunhoJogo({ nivel })}
+              />
+            </CampoRotulado>
+
+            <CampoRotulado rotulo="Início" dica={formatarDataHora(rascunhoJogo.inicio)}>
+              <SeletorInicio
+                valor={rascunhoJogo.inicio}
+                onChange={(inicio) => setRascunhoJogo({ inicio })}
+              />
+            </CampoRotulado>
+
+            <CampoRotulado rotulo="Duração" dica={`Termina ${formatarDataHora(fim)}`}>
+              <Chips
+                opcoes={DURACOES}
+                valor={rascunhoJogo.duracaoMinutos}
+                onSelecionar={(duracaoMinutos) => setRascunhoJogo({ duracaoMinutos })}
+              />
+            </CampoRotulado>
+
+            <CampoRotulado
+              rotulo="Prazo de confirmação"
+              dica={`Cancela sozinho em ${formatarDataHora(prazo)} se não bater o mínimo`}
+            >
+              <Chips
+                opcoes={PRAZOS}
+                valor={rascunhoJogo.prazoHorasAntes}
+                onSelecionar={(prazoHorasAntes) => setRascunhoJogo({ prazoHorasAntes })}
+              />
+            </CampoRotulado>
+
+            <View style={{ flexDirection: 'row', gap: 12 }}>
+              <View style={{ flex: 1 }}>
+                <CampoRotulado rotulo="Capacidade" erro={erro('capacidade')}>
+                  <Campo
+                    value={rascunhoJogo.capacidade}
+                    onChangeText={(capacidade) => setRascunhoJogo({ capacidade })}
+                    keyboardType="number-pad"
+                  />
+                </CampoRotulado>
+              </View>
+              <View style={{ flex: 1 }}>
+                <CampoRotulado rotulo="Mínimo" erro={erro('minimo')}>
+                  <Campo
+                    value={rascunhoJogo.minimo}
+                    onChangeText={(minimo) => setRascunhoJogo({ minimo })}
+                    keyboardType="number-pad"
+                  />
+                </CampoRotulado>
+              </View>
+            </View>
+
+            <CampoRotulado rotulo="Preço da vaga" erro={erro('preco')}>
+              <Campo
+                value={rascunhoJogo.preco}
+                onChangeText={(preco) => setRascunhoJogo({ preco })}
+                keyboardType="decimal-pad"
+                placeholder="R$ 0,00"
+              />
+            </CampoRotulado>
+
+            <View style={estilos.caixaSugestao}>
+              <Text style={estilos.tituloSugestao}>Não sabe quanto cobrar?</Text>
+              <CampoRotulado rotulo="Custo da locação da quadra">
+                <Campo
+                  value={rascunhoJogo.custoQuadra}
+                  onChangeText={(custoQuadra) => setRascunhoJogo({ custoQuadra })}
+                  keyboardType="decimal-pad"
+                  placeholder="R$ 0,00"
+                />
+              </CampoRotulado>
+              <Pressable onPress={() => void pedirSugestaoPreco()} style={estilos.botaoSugerir}>
+                <Text style={estilos.textoBotaoSugerir}>Sugerir preço</Text>
+              </Pressable>
+              {splitSugerido && (
+                <View style={estilos.blocoSplit}>
+                  <LinhaValor rotulo="Vaga" valor={splitSugerido.precoVagaCentavos} />
+                  <LinhaValor rotulo="Taxa do jogador" valor={splitSugerido.taxaServicoCentavos} />
+                  <LinhaValor
+                    rotulo="Jogador paga"
+                    valor={splitSugerido.totalCobradoCentavos}
+                    destaque
+                  />
+                  <LinhaValor rotulo="Quadra recebe" valor={splitSugerido.valorQuadraCentavos} />
+                  <LinhaValor
+                    rotulo="Plataforma"
+                    valor={splitSugerido.receitaPlataformaCentavos}
+                  />
+                </View>
+              )}
+            </View>
+
+            <View style={estilos.linhaSwitch}>
+              <View style={{ flex: 1, paddingRight: 12 }}>
+                <Text style={estilos.rotuloSwitch}>Jogo público</Text>
+                <Text style={estilos.dicaSwitch}>Aparece na busca pra qualquer jogador</Text>
+              </View>
+              <Switch
+                value={rascunhoJogo.publico}
+                onValueChange={(publico) => setRascunhoJogo({ publico })}
+                trackColor={{ true: cores.menta, false: 'rgba(255,255,255,0.2)' }}
+              />
+            </View>
           </View>
 
-          {erroCriacao ? (
-            <Text style={estilos.erro}>Please fill in at least the location and time.</Text>
-          ) : null}
-
-          <BotaoPrimario rotulo="Publish game" onPress={publicarJogo} estilo={{ marginTop: 20 }} />
-          <BotaoTexto rotulo="Cancel" onPress={fecharSobreposicoes} estilo={{ marginTop: 12 }} />
+          {criandoJogo ? (
+            <ActivityIndicator color={cores.menta} style={{ marginTop: 24 }} />
+          ) : (
+            <BotaoPrimario
+              rotulo="Publicar jogo"
+              onPress={() => void enviarNovoJogo()}
+              estilo={{ marginTop: 20 }}
+            />
+          )}
+          <BotaoTexto rotulo="Cancelar" onPress={fecharSobreposicoes} estilo={{ marginTop: 12 }} />
         </ScrollView>
       </KeyboardAvoidingView>
     </FolhaInferior>
+  );
+}
+
+function LinhaValor({
+  rotulo,
+  valor,
+  destaque,
+}: {
+  rotulo: string;
+  valor: number;
+  destaque?: boolean;
+}) {
+  return (
+    <View style={estilos.linhaValor}>
+      <Text style={[estilos.rotuloValor, destaque && estilos.valorDestaque]}>{rotulo}</Text>
+      <Text style={[estilos.valorValor, destaque && estilos.valorDestaque]}>
+        {formatarCentavos(valor)}
+      </Text>
+    </View>
   );
 }
 
@@ -241,35 +521,32 @@ function FolhaEditarPerfil() {
           contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 22, paddingBottom: 34 }}
         >
           <AlcaFolha />
-          <Text style={[estilos.tituloFolha, { marginBottom: 18 }]}>Edit profile</Text>
+          <Text style={[estilos.tituloFolha, { marginBottom: 18 }]}>Editar perfil</Text>
 
           <View style={{ gap: 14 }}>
-            <View>
-              <Text style={estilos.rotuloCampo}>Full name</Text>
+            <CampoRotulado rotulo="Nome completo">
               <Campo
                 value={rascunhoPerfil.name}
                 onChangeText={(name) => setRascunhoPerfil({ name })}
               />
-            </View>
-            <View>
-              <Text style={estilos.rotuloCampo}>Position</Text>
+            </CampoRotulado>
+            <CampoRotulado rotulo="Posição">
               <Campo
                 value={rascunhoPerfil.position}
                 onChangeText={(position) => setRascunhoPerfil({ position })}
-                placeholder="e.g. Midfielder"
+                placeholder="ex.: Meio-campo"
               />
-            </View>
-            <View>
-              <Text style={[estilos.rotuloCampo, { marginBottom: 8 }]}>Skill level</Text>
+            </CampoRotulado>
+            <CampoRotulado rotulo="Nível">
               <SeletorNivel
                 valor={rascunhoPerfil.skill}
                 onSelect={(skill) => setRascunhoPerfil({ skill })}
               />
-            </View>
+            </CampoRotulado>
           </View>
 
-          <BotaoPrimario rotulo="Save changes" onPress={salvarPerfil} estilo={{ marginTop: 22 }} />
-          <BotaoTexto rotulo="Cancel" onPress={fecharSobreposicoes} estilo={{ marginTop: 12 }} />
+          <BotaoPrimario rotulo="Salvar" onPress={salvarPerfil} estilo={{ marginTop: 22 }} />
+          <BotaoTexto rotulo="Cancelar" onPress={fecharSobreposicoes} estilo={{ marginTop: 12 }} />
         </ScrollView>
       </KeyboardAvoidingView>
     </FolhaInferior>
@@ -332,7 +609,7 @@ function FolhaChat() {
             <TextInput
               value={rascunhoChat}
               onChangeText={setRascunhoChat}
-              placeholder="Message"
+              placeholder="Mensagem"
               placeholderTextColor="rgba(255,255,255,0.4)"
               style={estilos.campoChat}
               onSubmitEditing={enviarMensagem}
@@ -362,14 +639,14 @@ function FolhaAjustes() {
           <Pressable onPress={fecharSobreposicoes} hitSlop={10}>
             <IconeVoltar />
           </Pressable>
-          <Text style={estilos.tituloAjustes}>Settings</Text>
+          <Text style={estilos.tituloAjustes}>Ajustes</Text>
         </View>
 
         <View style={estilos.perfilAjustes}>
           <Avatar inicial={perfil.initial} tamanho={48} variante="claro" />
           <View>
             <Text style={estilos.nomeAjustes}>{perfil.name}</Text>
-            <Text style={estilos.legendaAjustes}>Manage your account preferences</Text>
+            <Text style={estilos.legendaAjustes}>Preferências da sua conta</Text>
           </View>
         </View>
 
@@ -391,18 +668,18 @@ function FolhaAjustes() {
         </View>
 
         <View style={{ paddingHorizontal: 20, paddingTop: 10, paddingBottom: 34 }}>
-          <Pressable onPress={() => mostrarTorrada('Logged out')} style={estilos.itemSaida}>
+          <Pressable onPress={() => mostrarTorrada('Sessão encerrada')} style={estilos.itemSaida}>
             <Text style={[estilos.iconeAjuste, { color: cores.texto }]}>→</Text>
-            <Text style={estilos.tituloItem}>Log out</Text>
+            <Text style={estilos.tituloItem}>Sair</Text>
           </Pressable>
           <Pressable
-            onPress={() => mostrarTorrada('Account deletion requires confirmation')}
+            onPress={() => mostrarTorrada('Exclusão de conta exige confirmação')}
             style={estilos.itemSaida}
           >
             <Text style={estilos.iconeAjuste}>🗑</Text>
             <View>
-              <Text style={[estilos.tituloItem, { color: cores.perigo }]}>Delete account</Text>
-              <Text style={estilos.subtituloItem}>Permanently delete your account</Text>
+              <Text style={[estilos.tituloItem, { color: cores.perigo }]}>Excluir conta</Text>
+              <Text style={estilos.subtituloItem}>Apaga sua conta em definitivo</Text>
             </View>
           </Pressable>
         </View>
@@ -427,12 +704,12 @@ const estilos = StyleSheet.create({
   legendaFoto: {
     fontFamily: Platform.select({ ios: 'Menlo', android: 'monospace', default: 'monospace' }),
     fontSize: 10,
-    color: cores.textoSuave,
+    color: 'rgba(255,255,255,0.75)',
   },
 
   tituloDetalhe: { color: cores.texto, fontSize: 21, fontWeight: '700' },
   subtituloDetalhe: { color: cores.textoSuave, fontSize: 14, marginTop: 6 },
-  linhaEtiquetas: { flexDirection: 'row', gap: 8, marginVertical: 14 },
+  linhaEtiquetas: { flexDirection: 'row', gap: 8, marginVertical: 14, flexWrap: 'wrap' },
   etiqueta: {
     backgroundColor: 'rgba(255,255,255,0.1)',
     paddingVertical: 6,
@@ -444,7 +721,23 @@ const estilos = StyleSheet.create({
   divisor: { height: 1, backgroundColor: cores.linha, marginVertical: 18 },
   linhaPreco: { flexDirection: 'row', justifyContent: 'space-between' },
   textoPreco: { color: cores.texto, fontSize: 15 },
-  tituloJogadores: { color: cores.texto, fontSize: 14, fontWeight: '700', marginTop: 20, marginBottom: 10 },
+  tituloJogadores: {
+    color: cores.texto,
+    fontSize: 14,
+    fontWeight: '700',
+    marginTop: 20,
+    marginBottom: 10,
+  },
+  semJogadores: { color: cores.textoFraco, fontSize: 13 },
+  blocoStatus: {
+    marginTop: 24,
+    borderWidth: 1,
+    borderColor: cores.borda,
+    borderRadius: 22,
+    paddingVertical: 14,
+    alignItems: 'center',
+  },
+  textoStatus: { color: cores.menta, fontSize: 15, fontWeight: '700' },
 
   tituloFolha: { color: cores.texto, fontSize: 19, fontWeight: '700', textAlign: 'center' },
   cartaoResumo: {
@@ -456,8 +749,27 @@ const estilos = StyleSheet.create({
   },
   tituloResumo: { color: cores.texto, fontSize: 16, fontWeight: '700' },
   subtituloResumo: { color: cores.textoSuave, fontSize: 13, marginTop: 4 },
-  linhaResumo: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 14 },
-  textoResumo: { color: cores.texto, fontSize: 15 },
+  divisorResumo: { height: 1, backgroundColor: cores.linha, marginVertical: 14 },
+  politica: { color: 'rgba(255,255,255,0.75)', fontSize: 13, lineHeight: 20 },
+
+  linhaValor: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 3 },
+  rotuloValor: { color: cores.textoSuave, fontSize: 14 },
+  valorValor: { color: cores.texto, fontSize: 14 },
+  valorDestaque: { color: cores.texto, fontWeight: '700', fontSize: 15 },
+
+  rotuloMetodo: { color: cores.textoFraco, fontSize: 12 },
+  notaMetodo: { color: cores.textoFraco, fontSize: 12, lineHeight: 18 },
+  avisoFila: { color: 'rgba(255,255,255,0.7)', fontSize: 13, lineHeight: 20, marginTop: 16 },
+
+  botaoSecundario: {
+    marginTop: 12,
+    borderWidth: 1,
+    borderColor: cores.menta,
+    borderRadius: 24,
+    paddingVertical: 15,
+    alignItems: 'center',
+  },
+  textoBotaoSecundario: { color: cores.menta, fontSize: 15, fontWeight: '700' },
 
   circuloCheck: {
     width: 64,
@@ -468,7 +780,7 @@ const estilos = StyleSheet.create({
     justifyContent: 'center',
     marginBottom: 18,
   },
-  tituloSucesso: { color: cores.texto, fontSize: 20, fontWeight: '700' },
+  tituloSucesso: { color: cores.texto, fontSize: 20, fontWeight: '700', textAlign: 'center' },
   descricaoSucesso: {
     color: cores.textoSuave,
     fontSize: 14,
@@ -478,7 +790,29 @@ const estilos = StyleSheet.create({
   },
 
   erro: { color: cores.erro, fontSize: 13, marginTop: 12 },
-  rotuloCampo: { color: cores.textoFraco, fontSize: 12, marginBottom: 6 },
+
+  caixaSugestao: {
+    borderWidth: 1,
+    borderColor: cores.borda,
+    borderRadius: 16,
+    padding: 14,
+    gap: 12,
+    backgroundColor: cores.preenchimentoCartao,
+  },
+  tituloSugestao: { color: cores.texto, fontSize: 15, fontWeight: '700' },
+  botaoSugerir: {
+    borderWidth: 1,
+    borderColor: cores.menta,
+    borderRadius: 20,
+    paddingVertical: 11,
+    alignItems: 'center',
+  },
+  textoBotaoSugerir: { color: cores.menta, fontSize: 14, fontWeight: '700' },
+  blocoSplit: { borderTopWidth: 1, borderTopColor: cores.linha, paddingTop: 10 },
+
+  linhaSwitch: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  rotuloSwitch: { color: cores.texto, fontSize: 14, fontWeight: '600' },
+  dicaSwitch: { color: cores.textoFraco, fontSize: 12, marginTop: 2 },
 
   cabecalhoChat: {
     flexDirection: 'row',

@@ -12,7 +12,7 @@ export function TelaProfile({ topo }: { topo: number }) {
     <>
       <Cabecalho
         topo={topo}
-        titulo="Profile"
+        titulo="Perfil"
         acao={
           <Pressable onPress={abrirAjustes}>
             <IconeEngrenagem />
@@ -30,29 +30,30 @@ export function TelaProfile({ topo }: { topo: number }) {
 
       <View style={estilos.cartaoProgresso}>
         <View style={estilos.linhaProgresso}>
-          <Text style={estilos.tituloProgresso}>You're almost there!</Text>
+          <Text style={estilos.tituloProgresso}>Quase lá!</Text>
           <Text style={estilos.contador}>{perfil.progress}/7</Text>
         </View>
         <View style={{ marginVertical: 12 }}>
           <BarraProgresso progresso={perfil.progress} />
         </View>
         <Text style={estilos.dicaProgresso}>
-          Players trust profiles with a photo. Add yours to get recognized and invited more often.
+          Jogadores confiam mais em perfis com foto. Coloque a sua pra ser reconhecido e convidado
+          com mais frequência.
         </Text>
         <Pressable onPress={abrirEdicaoPerfil} style={estilos.botaoFinalizar}>
-          <Text style={estilos.textoFinalizar}>Finish profile  ✎</Text>
+          <Text style={estilos.textoFinalizar}>Completar perfil  ✎</Text>
         </Pressable>
       </View>
 
       <View style={estilos.linhaAtributos}>
         <View style={estilos.atributo}>
           <Text style={estilos.rotuloAtributo}>
-            Position: <Text style={estilos.valorAtributo}>{perfil.position}</Text>
+            Posição: <Text style={estilos.valorAtributo}>{perfil.position}</Text>
           </Text>
         </View>
         <View style={estilos.atributo}>
           <Text style={estilos.rotuloAtributo}>
-            Skill: <Text style={estilos.selo}> {perfil.skill} </Text>
+            Nível: <Text style={estilos.selo}> {perfil.skill} </Text>
           </Text>
         </View>
       </View>
@@ -60,28 +61,28 @@ export function TelaProfile({ topo }: { topo: number }) {
       <View style={estilos.painelNumeros}>
         <View style={[estilos.celulaNumero, estilos.comBorda]}>
           <Text style={estilos.emoji}>⚽</Text>
-          <Text style={estilos.rotuloNumero}>Games</Text>
+          <Text style={estilos.rotuloNumero}>Jogos</Text>
           <Text style={estilos.numero}>{perfil.games}</Text>
         </View>
         <View style={[estilos.celulaNumero, estilos.comBorda]}>
           <Text style={estilos.emoji}>🏟</Text>
-          <Text style={estilos.rotuloNumero}>Facilities</Text>
+          <Text style={estilos.rotuloNumero}>Quadras</Text>
           <Text style={estilos.numero}>{perfil.facilities}</Text>
         </View>
         <View style={estilos.celulaNumero}>
           <Text style={estilos.emoji}>🕑</Text>
-          <Text style={estilos.rotuloNumero}>Hours</Text>
+          <Text style={estilos.rotuloNumero}>Horas</Text>
           <Text style={estilos.numero}>{perfil.hours}</Text>
         </View>
       </View>
 
       <View style={{ padding: 20, paddingBottom: 30 }}>
-        <Text style={estilos.tituloAtividade}>Activity</Text>
+        <Text style={estilos.tituloAtividade}>Atividade</Text>
         <View style={estilos.cartaoAtividade}>
           <Text style={estilos.textoAtividade}>
-            You have no activity yet.{' '}
+            Nenhuma atividade ainda.{' '}
             <Text style={{ color: cores.texto, fontWeight: '600' }}>
-              Check back after your first game!
+              Volte aqui depois do seu primeiro jogo!
             </Text>
           </Text>
         </View>

@@ -1,5 +1,13 @@
 import React from 'react';
-import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import {
+  Modal,
+  Pressable,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
@@ -22,9 +30,19 @@ import { Sobreposicoes } from './sobreposicoes';
 
 function Conteudo() {
   const insets = useSafeAreaInsets();
-  const { aba, setAba, perfil, torrada, abrirCriacaoJogo, abrirEdicaoPerfil } = usePlei();
+  const {
+    aba,
+    setAba,
+    perfil,
+    torrada,
+    abrirCriacaoJogo,
+    abrirEdicaoPerfil,
+    recarregar,
+    carregando,
+  } = usePlei();
 
   const mostrarFaixaPerfil = aba === 'discover' && perfil.progress < 7;
+  const recarregavel = aba === 'discover' || aba === 'bookings';
 
   return (
     <LinearGradient
@@ -37,7 +55,19 @@ function Conteudo() {
       <StatusBar style="light" />
 
       <View style={{ flex: 1 }}>
-        <ScrollView showsVerticalScrollIndicator={false}>
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            recarregavel ? (
+              <RefreshControl
+                refreshing={carregando}
+                onRefresh={() => void recarregar()}
+                tintColor={cores.menta}
+                colors={[cores.menta]}
+              />
+            ) : undefined
+          }
+        >
           {aba === 'discover' && <TelaDiscover topo={insets.top} />}
           {aba === 'bookings' && <TelaBookings topo={insets.top} />}
           {aba === 'friends' && <TelaFriends topo={insets.top} />}
@@ -55,7 +85,7 @@ function Conteudo() {
       {mostrarFaixaPerfil && (
         <View style={estilos.faixaPerfil}>
           <View>
-            <Text style={estilos.textoFaixa}>Let players know who you are.</Text>
+            <Text style={estilos.textoFaixa}>Deixe os jogadores saberem quem é você.</Text>
             <View style={{ marginTop: 8, width: 170 }}>
               <BarraProgresso progresso={perfil.progress} altura={6} />
             </View>
@@ -63,26 +93,26 @@ function Conteudo() {
           <View style={{ alignItems: 'flex-end' }}>
             <Text style={estilos.contadorFaixa}>{perfil.progress}/7</Text>
             <Pressable onPress={abrirEdicaoPerfil} style={estilos.botaoFaixa}>
-              <Text style={estilos.textoBotaoFaixa}>Finish profile</Text>
+              <Text style={estilos.textoBotaoFaixa}>Completar perfil</Text>
             </Pressable>
           </View>
         </View>
       )}
 
       <View style={[estilos.barraAbas, { paddingBottom: Math.max(insets.bottom, 12) + 14 }]}>
-        <ItemAba chave="discover" rotulo="Discover" ativa={aba} onPress={setAba}>
+        <ItemAba chave="discover" rotulo="Descubra" ativa={aba} onPress={setAba}>
           {(cor) => <IconeLupa color={cor} />}
         </ItemAba>
-        <ItemAba chave="bookings" rotulo="Bookings" ativa={aba} onPress={setAba}>
+        <ItemAba chave="bookings" rotulo="Vagas" ativa={aba} onPress={setAba}>
           {(cor) => <IconeAgenda color={cor} />}
         </ItemAba>
-        <ItemAba chave="friends" rotulo="Friends" ativa={aba} onPress={setAba}>
+        <ItemAba chave="friends" rotulo="Amigos" ativa={aba} onPress={setAba}>
           {(cor) => <IconeAmigos color={cor} />}
         </ItemAba>
-        <ItemAba chave="messages" rotulo="Messages" ativa={aba} onPress={setAba}>
+        <ItemAba chave="messages" rotulo="Mensagens" ativa={aba} onPress={setAba}>
           {(cor) => <IconeBalao color={cor} />}
         </ItemAba>
-        <ItemAba chave="profile" rotulo="Profile" ativa={aba} onPress={setAba}>
+        <ItemAba chave="profile" rotulo="Perfil" ativa={aba} onPress={setAba}>
           {() => (
             <View>
               <View style={estilos.avatarAba}>

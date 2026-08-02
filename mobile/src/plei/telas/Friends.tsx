@@ -12,9 +12,9 @@ export function TelaFriends({ topo }: { topo: number }) {
     <>
       <Cabecalho
         topo={topo}
-        titulo="Friends"
+        titulo="Amigos"
         acao={
-          <Pressable onPress={() => mostrarTorrada('No new notifications')}>
+          <Pressable onPress={() => mostrarTorrada('Sem notificações novas')}>
             <IconeSino />
           </Pressable>
         }
@@ -24,27 +24,27 @@ export function TelaFriends({ topo }: { topo: number }) {
         ativa={abaAmigos}
         onSelect={setAbaAmigos}
         itens={[
-          { chave: 'friends', rotulo: 'MY FRIENDS' },
-          { chave: 'contacts', rotulo: 'MY CONTACTS' },
+          { chave: 'friends', rotulo: 'MEUS AMIGOS' },
+          { chave: 'contacts', rotulo: 'CONTATOS' },
         ]}
       />
 
       <View style={{ paddingHorizontal: 20, paddingVertical: 16, flexDirection: 'row' }}>
-        <CampoBusca texto="Search friends" />
+        <CampoBusca texto="Buscar amigos" />
       </View>
 
       {abaAmigos === 'friends' ? (
         <View style={{ paddingHorizontal: 20, paddingVertical: 8 }}>
-          <Text style={estilos.secao}>Groups</Text>
+          <Text style={estilos.secao}>Grupos</Text>
           <Pressable
-            onPress={() => mostrarTorrada('Group creation coming soon')}
+            onPress={() => mostrarTorrada('Criação de grupo em breve')}
             style={estilos.criarGrupo}
           >
             <IconeNovoGrupo />
-            <Text style={estilos.textoCriarGrupo}>Create group</Text>
+            <Text style={estilos.textoCriarGrupo}>Criar grupo</Text>
           </Pressable>
 
-          <Text style={estilos.secao}>Friends</Text>
+          <Text style={estilos.secao}>Amigos</Text>
           <View style={{ gap: 2 }}>
             {amigos.map((amigo) => (
               <View key={amigo.id} style={estilos.linhaAmigo}>
@@ -54,7 +54,7 @@ export function TelaFriends({ topo }: { topo: number }) {
                   <Text style={estilos.mutuo}>{amigo.mutual}</Text>
                 </View>
                 <Pressable onPress={() => abrirChatComAmigo(amigo)} style={estilos.botaoMensagem}>
-                  <Text style={estilos.textoBotaoMensagem}>Message</Text>
+                  <Text style={estilos.textoBotaoMensagem}>Mensagem</Text>
                 </Pressable>
               </View>
             ))}
@@ -67,15 +67,15 @@ export function TelaFriends({ topo }: { topo: number }) {
             <View style={[estilos.barraEsqueleto, { width: 150 }]} />
             <View style={[estilos.barraEsqueleto, { width: 165 }]} />
           </View>
-          <Text style={estilos.tituloVazio}>No contact available</Text>
+          <Text style={estilos.tituloVazio}>Nenhum contato disponível</Text>
           <Text style={estilos.descricaoVazio}>
-            If you want to invite friends, please allow Plei to access to your contacts.
+            Pra convidar amigos, libere o acesso aos seus contatos.
           </Text>
           <Pressable
-            onPress={() => mostrarTorrada('Contacts permission requested')}
+            onPress={() => mostrarTorrada('Permissão de contatos solicitada')}
             style={estilos.botaoContatos}
           >
-            <Text style={estilos.textoBotaoContatos}>Share my contacts</Text>
+            <Text style={estilos.textoBotaoContatos}>Compartilhar contatos</Text>
           </Pressable>
         </View>
       )}

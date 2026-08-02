@@ -46,9 +46,19 @@ export interface Participacao {
   usuarioId: string;
   status: StatusParticipacao;
   metodo?: 'cartao' | 'pix';
+  paymentId?: string;
+  split?: SplitVaga;
   posicaoEspera?: number;
+  promovidoEm?: string;
+  /** Janela de 10 min pra pagar depois de ser promovido da waitlist. */
   expiraReservaEm?: string;
+  substituiuParticipacaoId?: string;
   capturado?: boolean;
+  checkinEm?: string;
+  valorReembolsadoCentavos?: number;
+  valorCreditadoCentavos?: number;
+  criadoEm: string;
+  atualizadoEm: string;
 }
 
 export interface SplitVaga {
@@ -72,6 +82,18 @@ export interface ResultadoInscricao {
 export interface RespostaInscricao {
   participacao: Participacao;
   resultado: ResultadoInscricao;
+  jogo: Jogo;
+}
+
+/** POST /participacoes/:id/cancelar — devolve a participação e quem subiu da fila. */
+export interface RespostaCancelamento {
+  participacao: Participacao;
+  promovida?: Participacao;
+}
+
+/** POST /participacoes/:id/pagar-reserva. */
+export interface RespostaPagarReserva {
+  participacao: Participacao;
   jogo: Jogo;
 }
 
