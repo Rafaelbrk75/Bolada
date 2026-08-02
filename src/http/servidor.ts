@@ -1,0 +1,58 @@
+import Fastify, { FastifyError, FastifyInstance } from 'fastify';
+import { JogoAppService } from '../app/jogoAppService';
+import {
+  CreditoRepositorioMemoria,
+  EventoRepositorioMemoria,
+  JogoRepositorioMemoria,
+  ParticipacaoRepositorioMemoria,
+  RepasseRepositorioMemoria,
+  UsuarioRepositorioMemoria,
+} from '../infra/repositorios/memoria';
+import { GatewayPagamentoFake } from '../infra/gateway/gatewayFake';
+import { registrarRotasJogos } from './rotas/jogos';
+import { registrarRotasParticipacoes } from './rotas/participacoes';
+import { registrarRotasPrecos } from './rotas/precos';
+import { registrarRotasRepasses } from './rotas/repasses';
+
+export interface AppDeps {
+  jogoService: JogoAppService;
+}
+
+export function construirApp(deps?: Partial<AppDeps>): FastifyInstance {
+  const app = Fastify({ logger: true });
+
+  const jogoService =
+    deps?.jogoService ??
+    new JogoAppService(
+      new JogoRepositorioMemoria(),
+      new ParticipacaoRepositorioMemoria(),
+      new CreditoRepositorioMemoria(),
+      new EventoRepositorioMemoria(),
+      new UsuarioRepositorioMemoria(),
+      new RepasseRepositorioMemoria(),
+      new GatewayPagamentoFake()
+    );
+
+  app.setErrorHandler((error: FastifyError, _request, reply) => {
+    if (error.validation) {
+      reply.status(400).send({ erro: 'requisição inválida', detalhes: error.validation });
+      return;
+    }
+    const statusCode = error.statusCode;
+    if (statusCode && statusCode < 500) {
+      reply.status(statusCode).send({ erro: error.message });
+      return;
+    }
+    app.log.error(error);
+    reply.status(500).send({ erro: 'erro interno' });
+  });
+
+  app.get('/saude', async () => ({ status: 'ok' }));
+
+  registrarRotasJogos(app, jogoService);
+  registrarRotasParticipacoes(app, jogoService);
+  registrarRotasPrecos(app);
+  registrarRotasRepasses(app, jogoService);
+
+  return app;
+}

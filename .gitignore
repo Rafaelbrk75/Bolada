@@ -1,0 +1,21 @@
+# dependências
+node_modules/
+
+# build
+dist/
+mobile/.expo/
+mobile/web-build/
+
+# ambiente
+.env
+.env.local
+mobile/.env
+mobile/.env.local
+
+# worktrees criadas por agentes
+.claude/worktrees/
+
+# sistema / editor
+.DS_Store
+Thumbs.db
+*.log
