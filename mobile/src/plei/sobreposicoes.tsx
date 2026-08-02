@@ -25,10 +25,11 @@ import {
   SeletorNivel,
 } from './componentes';
 import { SeletorInicio } from './SeletorInicio';
+import { TelaCheckout } from './TelaCheckout';
 import { IconeAvancar, IconeCheck, IconeEnviar, IconeVoltar } from './icones';
 import { AJUSTES, DURACOES, NIVEIS_JOGO, PRAZOS } from './dados';
 import { previsaoReembolso, rotuloParticipacao } from './adaptador';
-import { MetodoPagamento, useJogoAberto, usePlei } from './estado';
+import { useJogoAberto, usePlei } from './estado';
 import { formatarCentavos } from '../utils/moeda';
 import { formatarDataHora, somarHoras, somarMinutos } from '../utils/data';
 
@@ -36,7 +37,8 @@ export function Sobreposicoes() {
   return (
     <>
       <FolhaDetalheJogo />
-      <FolhaConfirmarEntrada />
+      <TelaCheckout />
+      <FolhaEntrarFila />
       <FolhaEntradaConfirmada />
       <FolhaCancelamento />
       <FolhaCriarJogo />
@@ -44,25 +46,6 @@ export function Sobreposicoes() {
       <FolhaChat />
       <FolhaAjustes />
     </>
-  );
-}
-
-function SeletorMetodo({
-  valor,
-  onSelect,
-}: {
-  valor: MetodoPagamento;
-  onSelect(m: MetodoPagamento): void;
-}) {
-  return (
-    <Chips
-      opcoes={[
-        { valor: 'cartao' as const, rotulo: 'Cartão' },
-        { valor: 'pix' as const, rotulo: 'Pix' },
-      ]}
-      valor={valor}
-      onSelecionar={onSelect}
-    />
   );
 }
 
@@ -155,68 +138,36 @@ function FolhaDetalheJogo() {
   );
 }
 
-function FolhaConfirmarEntrada() {
-  const {
-    passoEntrada,
-    splitPrevisto,
-    metodoPagamento,
-    setMetodoPagamento,
-    confirmarEntrada,
-    cancelarEntrada,
-    enviandoEntrada,
-    erroEntrada,
-  } = usePlei();
+/**
+ * Jogo lotado não passa pelo checkout (nada é cobrado pra entrar na fila) —
+ * fica com esta folha compacta. Vaga disponível usa TelaCheckout.
+ */
+function FolhaEntrarFila() {
+  const { passoEntrada, confirmarEntrada, cancelarEntrada, enviandoEntrada, erroEntrada } =
+    usePlei();
   const jogo = useJogoAberto();
   const lotado = !!jogo && jogo.going >= jogo.total;
 
   return (
-    <FolhaInferior visivel={passoEntrada === 'confirm' && !!jogo} aoFechar={cancelarEntrada}>
+    <FolhaInferior visivel={passoEntrada === 'confirm' && !!jogo && lotado} aoFechar={cancelarEntrada}>
       {jogo ? (
         <View style={{ paddingHorizontal: 20, paddingTop: 24, paddingBottom: 34 }}>
           <AlcaFolha />
-          <Text style={estilos.tituloFolha}>
-            {lotado ? 'Entrar na fila de espera' : 'Confirmar sua vaga'}
-          </Text>
+          <Text style={estilos.tituloFolha}>Entrar na fila de espera</Text>
 
           <View style={estilos.cartaoResumo}>
             <Text style={estilos.tituloResumo}>{jogo.title}</Text>
             <Text style={estilos.subtituloResumo}>
               {jogo.dataLonga} • {jogo.timeRange}
             </Text>
-
             <View style={estilos.divisorResumo} />
-
-            {splitPrevisto ? (
-              <>
-                <LinhaValor rotulo="Vaga" valor={splitPrevisto.precoVagaCentavos} />
-                <LinhaValor rotulo="Taxa de serviço" valor={splitPrevisto.taxaServicoCentavos} />
-                <LinhaValor
-                  rotulo="Total"
-                  valor={splitPrevisto.totalCobradoCentavos}
-                  destaque
-                />
-              </>
-            ) : (
-              <LinhaValor rotulo="Vaga" valor={jogo.precoVagaCentavos} destaque />
-            )}
+            <LinhaValor rotulo="Vaga" valor={jogo.precoVagaCentavos} destaque />
           </View>
 
-          {lotado ? (
-            <Text style={estilos.avisoFila}>
-              O jogo está cheio. Você entra na fila sem pagar nada agora — se abrir vaga, tem 10
-              minutos pra confirmar.
-            </Text>
-          ) : (
-            <View style={{ marginTop: 18, gap: 8 }}>
-              <Text style={estilos.rotuloMetodo}>Forma de pagamento</Text>
-              <SeletorMetodo valor={metodoPagamento} onSelect={setMetodoPagamento} />
-              <Text style={estilos.notaMetodo}>
-                {metodoPagamento === 'cartao'
-                  ? 'No cartão a cobrança só acontece quando o jogo confirma o mínimo de jogadores.'
-                  : 'No Pix a cobrança é imediata; se o jogo não confirmar, o valor volta integral.'}
-              </Text>
-            </View>
-          )}
+          <Text style={estilos.avisoFila}>
+            O jogo está cheio. Você entra na fila sem pagar nada agora — se abrir vaga, tem 10
+            minutos pra confirmar.
+          </Text>
 
           {erroEntrada ? <Text style={estilos.erro}>{erroEntrada}</Text> : null}
 
@@ -224,7 +175,7 @@ function FolhaConfirmarEntrada() {
             <ActivityIndicator color={cores.menta} style={{ marginTop: 24 }} />
           ) : (
             <BotaoPrimario
-              rotulo={lotado ? 'Entrar na fila' : 'Confirmar e entrar'}
+              rotulo="Entrar na fila"
               onPress={() => void confirmarEntrada()}
               estilo={{ marginTop: 20 }}
             />

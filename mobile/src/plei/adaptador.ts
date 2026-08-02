@@ -68,6 +68,24 @@ export function formatarDiaCurto(iso: string): string {
   return new Date(iso).toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit' });
 }
 
+/** "Hoje" / "Amanhã" / dia da semana — usado no resumo curto do checkout. */
+export function formatarRotuloDia(iso: string, agora: Date = new Date()): string {
+  const alvo = new Date(iso);
+  const inicioHoje = new Date(agora);
+  inicioHoje.setHours(0, 0, 0, 0);
+  const inicioAlvo = new Date(alvo);
+  inicioAlvo.setHours(0, 0, 0, 0);
+  const diffDias = Math.round((inicioAlvo.getTime() - inicioHoje.getTime()) / 86_400_000);
+  if (diffDias === 0) return 'Hoje';
+  if (diffDias === 1) return 'Amanhã';
+  const rotulo = alvo.toLocaleDateString('pt-BR', {
+    weekday: 'long',
+    day: '2-digit',
+    month: '2-digit',
+  });
+  return rotulo.charAt(0).toUpperCase() + rotulo.slice(1);
+}
+
 export function formatarDiaLongo(iso: string): string {
   return new Date(iso).toLocaleDateString('pt-BR', {
     weekday: 'long',
