@@ -47,15 +47,15 @@ class GatewayEspiao implements GatewayPagamento {
 }
 
 function novoServico(gw: GatewayPagamento) {
-  return new JogoAppService(
-    new JogoRepositorioMemoria(),
-    new ParticipacaoRepositorioMemoria(),
-    new CreditoRepositorioMemoria(),
-    new EventoRepositorioMemoria(),
-    new UsuarioRepositorioMemoria(),
-    new RepasseRepositorioMemoria(),
-    gw
-  );
+  return new JogoAppService({
+    jogoRepo: new JogoRepositorioMemoria(),
+    participacaoRepo: new ParticipacaoRepositorioMemoria(),
+    creditoRepo: new CreditoRepositorioMemoria(),
+    eventoRepo: new EventoRepositorioMemoria(),
+    usuarioRepo: new UsuarioRepositorioMemoria(),
+    repasseRepo: new RepasseRepositorioMemoria(),
+    gateway: gw,
+  });
 }
 
 function jogoBase(over: Partial<CriarJogoInput> = {}): CriarJogoInput {

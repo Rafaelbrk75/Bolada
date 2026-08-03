@@ -28,15 +28,15 @@ export function construirApp(deps?: Partial<AppDeps>): FastifyInstance {
 
   const jogoService =
     deps?.jogoService ??
-    new JogoAppService(
-      new JogoRepositorioMemoria(),
-      new ParticipacaoRepositorioMemoria(),
-      new CreditoRepositorioMemoria(),
-      new EventoRepositorioMemoria(),
-      new UsuarioRepositorioMemoria(),
-      new RepasseRepositorioMemoria(),
-      new GatewayPagamentoFake()
-    );
+    new JogoAppService({
+      jogoRepo: new JogoRepositorioMemoria(),
+      participacaoRepo: new ParticipacaoRepositorioMemoria(),
+      creditoRepo: new CreditoRepositorioMemoria(),
+      eventoRepo: new EventoRepositorioMemoria(),
+      usuarioRepo: new UsuarioRepositorioMemoria(),
+      repasseRepo: new RepasseRepositorioMemoria(),
+      gateway: new GatewayPagamentoFake(),
+    });
 
   app.setErrorHandler((error: FastifyError, _request, reply) => {
     if (error.validation) {
