@@ -2,7 +2,11 @@ import { FastifyInstance } from 'fastify';
 import { calcularSplitVaga, sugerirPrecoVaga } from '../../domain/pagamento';
 import { ErroRequisicaoInvalida } from '../../app/erros';
 
+const TAG = ['Preços'];
+
 const splitSchema = {
+  tags: TAG,
+  summary: 'Calcula o split de um preço de vaga (vaga + taxa + total)',
   body: {
     type: 'object',
     required: ['precoVagaCentavos'],
@@ -11,6 +15,8 @@ const splitSchema = {
 };
 
 const sugestaoSchema = {
+  tags: TAG,
+  summary: 'Sugere o preço da vaga a partir do custo da quadra',
   body: {
     type: 'object',
     required: ['custoQuadraCentavos', 'minimoJogadores'],

@@ -1,4 +1,6 @@
 import cors from '@fastify/cors';
+import swagger from '@fastify/swagger';
+import swaggerUi from '@fastify/swagger-ui';
 import Fastify, { FastifyError, FastifyInstance } from 'fastify';
 import { FacilityAppService } from '../app/facilityAppService';
 import { JogoAppService } from '../app/jogoAppService';
@@ -21,6 +23,7 @@ import { registrarRotasJogos } from './rotas/jogos';
 import { registrarRotasParticipacoes } from './rotas/participacoes';
 import { registrarRotasPrecos } from './rotas/precos';
 import { registrarRotasRepasses } from './rotas/repasses';
+import { registrarRotasUsuario } from './rotas/usuario';
 
 export interface AppDeps {
   jogoService: JogoAppService;
@@ -70,11 +73,51 @@ export function construirApp(deps?: Partial<AppDeps>): FastifyInstance {
 
   app.get('/saude', async () => ({ status: 'ok' }));
 
-  registrarRotasAdmin(app, facilityService);
-  registrarRotasJogos(app, jogoService);
-  registrarRotasParticipacoes(app, jogoService);
-  registrarRotasPrecos(app);
-  registrarRotasRepasses(app, jogoService);
+  // Dois documentos Swagger separados — cada `register` abaixo cria um
+  // contexto encapsulado do Fastify, e o plugin de swagger só enxerga rotas
+  // registradas dentro do próprio contexto (é o jeito documentado de ter
+  // múltiplos specs OpenAPI num app só). Admin (equipe interna) e App
+  // (jogador) nunca aparecem no doc um do outro.
+  app.register(async (adminApp) => {
+    await adminApp.register(swagger, {
+      openapi: {
+        info: {
+          title: 'FutMatch API — Admin',
+          description: 'Uso interno: comercial/ops cadastram facility, quadra, disponibilidade e fecham repasses.',
+          version: '1.0.0',
+        },
+        tags: [
+          { name: 'Facilities' },
+          { name: 'Courts' },
+          { name: 'Disponibilidade' },
+          { name: 'Repasses' },
+        ],
+      },
+    });
+    await adminApp.register(swaggerUi, { routePrefix: '/docs/admin' });
+
+    registrarRotasAdmin(adminApp, facilityService);
+    registrarRotasRepasses(adminApp, jogoService);
+  });
+
+  app.register(async (jogadorApp) => {
+    await jogadorApp.register(swagger, {
+      openapi: {
+        info: {
+          title: 'FutMatch API — App do Jogador',
+          description: 'Descoberta, inscrição, pagamento e perfil do jogador.',
+          version: '1.0.0',
+        },
+        tags: [{ name: 'Jogos' }, { name: 'Participações' }, { name: 'Preços' }, { name: 'Usuário' }],
+      },
+    });
+    await jogadorApp.register(swaggerUi, { routePrefix: '/docs' });
+
+    registrarRotasJogos(jogadorApp, jogoService);
+    registrarRotasParticipacoes(jogadorApp, jogoService);
+    registrarRotasPrecos(jogadorApp);
+    registrarRotasUsuario(jogadorApp, jogoService);
+  });
 
   return app;
 }

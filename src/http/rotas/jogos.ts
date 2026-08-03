@@ -1,7 +1,11 @@
 import { FastifyInstance } from 'fastify';
 import { JogoAppService } from '../../app/jogoAppService';
 
+const TAG = ['Jogos'];
+
 const criarJogoSchema = {
+  tags: TAG,
+  summary: 'Cria um jogo (rascunho)',
   body: {
     type: 'object',
     required: [
@@ -35,6 +39,10 @@ const criarJogoSchema = {
 };
 
 const inscricaoSchema = {
+  tags: TAG,
+  summary: 'Inscreve um jogador no jogo (join)',
+  description:
+    'Cartão pré-autoriza (captura só na confirmação); Pix cobra na hora; jogo cheio manda pra lista de espera sem cobrar.',
   body: {
     type: 'object',
     required: ['usuarioId', 'metodo'],
@@ -70,7 +78,7 @@ export function registrarRotasJogos(app: FastifyInstance, service: JogoAppServic
     reply.status(201).send(jogo);
   });
 
-  app.get('/jogos', async (req) => {
+  app.get('/jogos', { schema: { tags: TAG, summary: 'Busca jogos' } }, async (req) => {
     const q = req.query as { status?: string; publico?: string };
     return service.listarJogos({
       status: q.status as never,
@@ -78,51 +86,83 @@ export function registrarRotasJogos(app: FastifyInstance, service: JogoAppServic
     });
   });
 
-  app.get('/jogos/:id', async (req) => {
+  app.get('/jogos/:id', { schema: { tags: TAG, summary: 'Obtém um jogo' } }, async (req) => {
     const { id } = req.params as { id: string };
     return service.obterJogo(id);
   });
 
-  app.get('/jogos/:id/participacoes', async (req) => {
-    const { id } = req.params as { id: string };
-    return service.listarParticipacoes(id);
-  });
+  app.get(
+    '/jogos/:id/participacoes',
+    { schema: { tags: TAG, summary: 'Lista as participações (roster) de um jogo' } },
+    async (req) => {
+      const { id } = req.params as { id: string };
+      return service.listarParticipacoes(id);
+    }
+  );
 
-  app.get('/jogos/:id/eventos', async (req) => {
-    const { id } = req.params as { id: string };
-    return service.listarEventos(id);
-  });
+  app.get(
+    '/jogos/:id/eventos',
+    { schema: { tags: TAG, summary: 'Log de eventos do jogo (auditoria)' } },
+    async (req) => {
+      const { id } = req.params as { id: string };
+      return service.listarEventos(id);
+    }
+  );
 
-  app.post('/jogos/:id/publicar', async (req) => {
-    const { id } = req.params as { id: string };
-    return service.publicarJogo(id);
-  });
+  app.post(
+    '/jogos/:id/publicar',
+    { schema: { tags: TAG, summary: 'Publica o jogo (rascunho -> aberto)' } },
+    async (req) => {
+      const { id } = req.params as { id: string };
+      return service.publicarJogo(id);
+    }
+  );
 
-  app.post('/jogos/:id/iniciar', async (req) => {
-    const { id } = req.params as { id: string };
-    return service.iniciarJogo(id);
-  });
+  app.post(
+    '/jogos/:id/iniciar',
+    { schema: { tags: TAG, summary: 'Marca o início do jogo' } },
+    async (req) => {
+      const { id } = req.params as { id: string };
+      return service.iniciarJogo(id);
+    }
+  );
 
-  app.post('/jogos/:id/finalizar', async (req) => {
-    const { id } = req.params as { id: string };
-    return service.finalizarJogo(id);
-  });
+  app.post(
+    '/jogos/:id/finalizar',
+    { schema: { tags: TAG, summary: 'Marca o fim do jogo (dispara check-in/no-show)' } },
+    async (req) => {
+      const { id } = req.params as { id: string };
+      return service.finalizarJogo(id);
+    }
+  );
 
-  app.post('/jogos/:id/liquidar', async (req) => {
-    const { id } = req.params as { id: string };
-    return service.liquidarJogo(id);
-  });
+  app.post(
+    '/jogos/:id/liquidar',
+    { schema: { tags: TAG, summary: 'Liquida o jogo (libera pra entrar em repasse)' } },
+    async (req) => {
+      const { id } = req.params as { id: string };
+      return service.liquidarJogo(id);
+    }
+  );
 
-  app.post('/jogos/:id/cancelar', async (req) => {
-    const { id } = req.params as { id: string };
-    const { motivo } = (req.body ?? {}) as { motivo?: string };
-    return service.cancelarJogoManual(id, motivo);
-  });
+  app.post(
+    '/jogos/:id/cancelar',
+    { schema: { tags: TAG, summary: 'Cancela o jogo manualmente' } },
+    async (req) => {
+      const { id } = req.params as { id: string };
+      const { motivo } = (req.body ?? {}) as { motivo?: string };
+      return service.cancelarJogoManual(id, motivo);
+    }
+  );
 
-  app.post('/jogos/:id/expirar-prazo', async (req) => {
-    const { id } = req.params as { id: string };
-    return service.cancelarPorFaltaDeMinimo(id);
-  });
+  app.post(
+    '/jogos/:id/expirar-prazo',
+    { schema: { tags: TAG, summary: 'Cancela por não ter batido o mínimo até o prazo' } },
+    async (req) => {
+      const { id } = req.params as { id: string };
+      return service.cancelarPorFaltaDeMinimo(id);
+    }
+  );
 
   app.post('/jogos/:id/inscricoes', { schema: inscricaoSchema }, async (req, reply) => {
     const { id } = req.params as { id: string };

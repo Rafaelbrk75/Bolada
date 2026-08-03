@@ -1,7 +1,14 @@
 import { FastifyInstance } from 'fastify';
 import { JogoAppService } from '../../app/jogoAppService';
 
+// Repasse é operação de backoffice — sem painel de autoatendimento do parceiro
+// neste escopo, então vive no doc de admin junto com facilities/courts/slots.
+const TAG = ['Repasses'];
+
 const fecharRepasseSchema = {
+  tags: TAG,
+  summary: 'Fecha o repasse de uma quadra num período (lote)',
+  description: 'Idempotente por (quadra, período) — refechar o mesmo período não duplica.',
   body: {
     type: 'object',
     required: ['quadraId', 'periodoInicio', 'periodoFim'],
@@ -28,19 +35,13 @@ export function registrarRotasRepasses(app: FastifyInstance, service: JogoAppSer
     reply.status(201).send(resultado);
   });
 
-  app.get('/repasses', async (req) => {
+  app.get('/repasses', { schema: { tags: TAG, summary: 'Lista repasses' } }, async (req) => {
     const { quadraId } = req.query as { quadraId?: string };
     return service.listarRepasses(quadraId);
   });
 
-  app.get('/repasses/:id', async (req) => {
+  app.get('/repasses/:id', { schema: { tags: TAG, summary: 'Obtém um repasse e seus itens' } }, async (req) => {
     const { id } = req.params as { id: string };
     return service.obterRepasse(id);
-  });
-
-  // Perfil/reputação do usuário (no-shows, jogos realizados, bloqueio).
-  app.get('/usuarios/:id', async (req) => {
-    const { id } = req.params as { id: string };
-    return service.obterUsuario(id);
   });
 }

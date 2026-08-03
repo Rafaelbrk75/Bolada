@@ -6,7 +6,15 @@ import { FacilityStatus, SlotSource, SlotStatus, SurfaceType } from '../../infra
 // sozinho — por isso tudo aqui vive sob /admin, separado do app do jogador.
 // Autenticação/RBAC entra na borda quando existir auth no projeto.
 
+const TAG_FACILITIES = ['Facilities'];
+const TAG_COURTS = ['Courts'];
+const TAG_SLOTS = ['Disponibilidade'];
+
 const criarFacilitySchema = {
+  tags: TAG_FACILITIES,
+  summary: 'Cadastra uma facility parceira',
+  description:
+    'Uso interno: o comercial fecha o contrato e a equipe registra a facility aqui. O parceiro não se autocadastra.',
   body: {
     type: 'object',
     required: ['name', 'address', 'city', 'uf', 'lat', 'lng', 'platformFeeBps'],
@@ -17,7 +25,7 @@ const criarFacilitySchema = {
       uf: { type: 'string', minLength: 2, maxLength: 2 },
       lat: { type: 'number' },
       lng: { type: 'number' },
-      platformFeeBps: { type: 'integer' },
+      platformFeeBps: { type: 'integer', description: 'Comissão de contrato, em basis points (1000 = 10%)' },
       status: { type: 'string', enum: ['lead', 'em_negociacao', 'ativo', 'inativo'] },
       contractSignedAt: { type: 'string', format: 'date-time' },
       payoutMethod: { type: 'object' },
@@ -26,6 +34,8 @@ const criarFacilitySchema = {
 };
 
 const criarCourtSchema = {
+  tags: TAG_COURTS,
+  summary: 'Cadastra uma quadra (court) dentro de uma facility',
   body: {
     type: 'object',
     required: ['name', 'surfaceType', 'capacity', 'defaultSkillLevel', 'defaultPriceCents'],
@@ -37,12 +47,15 @@ const criarCourtSchema = {
       defaultPriceCents: { type: 'integer' },
       minPriceCents: { type: 'integer' },
       maxPriceCents: { type: 'integer' },
-      platformFeeBpsOverride: { type: 'integer' },
+      platformFeeBpsOverride: { type: 'integer', description: 'Sobrescreve a comissão da facility' },
     },
   },
 };
 
 const criarSlotsSchema = {
+  tags: TAG_SLOTS,
+  summary: 'Cadastra slots de disponibilidade em lote numa quadra',
+  description: 'Cadastro manual (digitado pela equipe) ou importado de planilha/integração.',
   body: {
     type: 'object',
     required: ['slots'],
@@ -89,27 +102,43 @@ export function registrarRotasAdmin(app: FastifyInstance, service: FacilityAppSe
     reply.status(201).send(facility);
   });
 
-  app.get('/admin/facilities', async (req) => {
-    const q = req.query as { status?: FacilityStatus };
-    return service.listarFacilities(q.status ? { status: q.status } : undefined);
-  });
+  app.get(
+    '/admin/facilities',
+    { schema: { tags: TAG_FACILITIES, summary: 'Lista facilities' } },
+    async (req) => {
+      const q = req.query as { status?: FacilityStatus };
+      return service.listarFacilities(q.status ? { status: q.status } : undefined);
+    }
+  );
 
-  app.get('/admin/facilities/:id', async (req) => {
-    const { id } = req.params as { id: string };
-    return service.obterFacility(id);
-  });
+  app.get(
+    '/admin/facilities/:id',
+    { schema: { tags: TAG_FACILITIES, summary: 'Obtém uma facility' } },
+    async (req) => {
+      const { id } = req.params as { id: string };
+      return service.obterFacility(id);
+    }
+  );
 
-  app.post('/admin/facilities/:id/contrato', async (req) => {
-    const { id } = req.params as { id: string };
-    const { quando } = (req.body ?? {}) as { quando?: string };
-    return service.assinarContrato(id, quando ? new Date(quando) : undefined);
-  });
+  app.post(
+    '/admin/facilities/:id/contrato',
+    { schema: { tags: TAG_FACILITIES, summary: 'Registra a assinatura do contrato e ativa a facility' } },
+    async (req) => {
+      const { id } = req.params as { id: string };
+      const { quando } = (req.body ?? {}) as { quando?: string };
+      return service.assinarContrato(id, quando ? new Date(quando) : undefined);
+    }
+  );
 
-  app.post('/admin/facilities/:id/status', async (req) => {
-    const { id } = req.params as { id: string };
-    const { status } = req.body as { status: FacilityStatus };
-    return service.mudarStatusFacility(id, status);
-  });
+  app.post(
+    '/admin/facilities/:id/status',
+    { schema: { tags: TAG_FACILITIES, summary: 'Avança o funil comercial da facility' } },
+    async (req) => {
+      const { id } = req.params as { id: string };
+      const { status } = req.body as { status: FacilityStatus };
+      return service.mudarStatusFacility(id, status);
+    }
+  );
 
   app.post('/admin/facilities/:id/courts', { schema: criarCourtSchema }, async (req, reply) => {
     const { id } = req.params as { id: string };
@@ -127,10 +156,14 @@ export function registrarRotasAdmin(app: FastifyInstance, service: FacilityAppSe
     reply.status(201).send(court);
   });
 
-  app.get('/admin/facilities/:id/courts', async (req) => {
-    const { id } = req.params as { id: string };
-    return service.listarCourts(id);
-  });
+  app.get(
+    '/admin/facilities/:id/courts',
+    { schema: { tags: TAG_COURTS, summary: 'Lista as quadras de uma facility' } },
+    async (req) => {
+      const { id } = req.params as { id: string };
+      return service.listarCourts(id);
+    }
+  );
 
   app.post('/admin/courts/:id/availability-slots', { schema: criarSlotsSchema }, async (req, reply) => {
     const { id } = req.params as { id: string };
@@ -149,14 +182,29 @@ export function registrarRotasAdmin(app: FastifyInstance, service: FacilityAppSe
     reply.status(201).send(criados);
   });
 
-  app.get('/admin/courts/:id/availability-slots', async (req) => {
-    const { id } = req.params as { id: string };
-    return service.listarSlots(id);
-  });
+  app.get(
+    '/admin/courts/:id/availability-slots',
+    { schema: { tags: TAG_SLOTS, summary: 'Lista os slots de disponibilidade de uma quadra' } },
+    async (req) => {
+      const { id } = req.params as { id: string };
+      return service.listarSlots(id);
+    }
+  );
 
-  app.post('/admin/slots/:id/status', async (req) => {
-    const { id } = req.params as { id: string };
-    const { status } = req.body as { status: SlotStatus };
-    return service.mudarStatusSlot(id, status);
-  });
+  app.post(
+    '/admin/slots/:id/status',
+    {
+      schema: {
+        tags: TAG_SLOTS,
+        summary: 'Muda o status de um slot',
+        description:
+          'Usado pelo motor (em_avaliacao/virou_jogo) e pela equipe (bloqueado, quando a quadra alugou por fora).',
+      },
+    },
+    async (req) => {
+      const { id } = req.params as { id: string };
+      const { status } = req.body as { status: SlotStatus };
+      return service.mudarStatusSlot(id, status);
+    }
+  );
 }
