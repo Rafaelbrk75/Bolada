@@ -10,6 +10,11 @@ import { SplitVaga } from '../../domain/pagamento';
 
 export interface Jogo {
   id: string;
+  /**
+   * Slot de disponibilidade que originou este jogo (modelo B2B2C).
+   * Opcional enquanto ainda existe o caminho antigo de criação direta.
+   */
+  slotId?: string;
   campoId: string;
   /** Quadra dona do campo — denormalizado aqui para agrupar repasses (A2). */
   quadraId: string;

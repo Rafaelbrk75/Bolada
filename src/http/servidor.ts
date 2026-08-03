@@ -1,5 +1,6 @@
 import cors from '@fastify/cors';
 import Fastify, { FastifyError, FastifyInstance } from 'fastify';
+import { FacilityAppService } from '../app/facilityAppService';
 import { JogoAppService } from '../app/jogoAppService';
 import {
   CreditoRepositorioMemoria,
@@ -9,7 +10,13 @@ import {
   RepasseRepositorioMemoria,
   UsuarioRepositorioMemoria,
 } from '../infra/repositorios/memoria';
+import {
+  AvailabilitySlotRepositorioMemoria,
+  CourtRepositorioMemoria,
+  FacilityRepositorioMemoria,
+} from '../infra/repositorios/memoriaParceiros';
 import { GatewayPagamentoFake } from '../infra/gateway/gatewayFake';
+import { registrarRotasAdmin } from './rotas/admin';
 import { registrarRotasJogos } from './rotas/jogos';
 import { registrarRotasParticipacoes } from './rotas/participacoes';
 import { registrarRotasPrecos } from './rotas/precos';
@@ -17,6 +24,7 @@ import { registrarRotasRepasses } from './rotas/repasses';
 
 export interface AppDeps {
   jogoService: JogoAppService;
+  facilityService: FacilityAppService;
 }
 
 export function construirApp(deps?: Partial<AppDeps>): FastifyInstance {
@@ -38,6 +46,14 @@ export function construirApp(deps?: Partial<AppDeps>): FastifyInstance {
       gateway: new GatewayPagamentoFake(),
     });
 
+  const facilityService =
+    deps?.facilityService ??
+    new FacilityAppService({
+      facilityRepo: new FacilityRepositorioMemoria(),
+      courtRepo: new CourtRepositorioMemoria(),
+      slotRepo: new AvailabilitySlotRepositorioMemoria(),
+    });
+
   app.setErrorHandler((error: FastifyError, _request, reply) => {
     if (error.validation) {
       reply.status(400).send({ erro: 'requisição inválida', detalhes: error.validation });
@@ -54,6 +70,7 @@ export function construirApp(deps?: Partial<AppDeps>): FastifyInstance {
 
   app.get('/saude', async () => ({ status: 'ok' }));
 
+  registrarRotasAdmin(app, facilityService);
   registrarRotasJogos(app, jogoService);
   registrarRotasParticipacoes(app, jogoService);
   registrarRotasPrecos(app);
